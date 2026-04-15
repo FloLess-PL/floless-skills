@@ -20,7 +20,10 @@ jobs:
       - name: Install skills-ref (pinned alpha)
         run: |
           pip install "skills-ref==0.1.1"
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          # Add the Python scripts directory to PATH for subsequent steps
+          SCRIPTS_DIR=$(python -c "import sysconfig; print(sysconfig.get_path('scripts'))")
+          echo "skills-ref scripts dir: $SCRIPTS_DIR"
+          echo "$SCRIPTS_DIR" >> $GITHUB_PATH
 
       - name: Validate all skills (skills-ref)
         run: |
