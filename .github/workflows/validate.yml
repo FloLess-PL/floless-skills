@@ -18,14 +18,16 @@ jobs:
           python-version: "3.13"
 
       - name: Install skills-ref (pinned alpha)
-        run: pip install "skills-ref==0.1.1"
+        run: |
+          pip install "skills-ref==0.1.1"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Validate all skills (skills-ref)
         run: |
           set -e
           for dir in skills/*/; do
             echo "validating $dir"
-            python -m skills_ref validate "$dir"
+            skills-ref validate "$dir"
           done
 
       - name: Validate all skills (bash belt)
