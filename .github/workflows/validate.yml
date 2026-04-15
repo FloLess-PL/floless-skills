@@ -13,17 +13,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install skills-ref (pinned alpha)
-        run: |
-          pip install --user "skills-ref==0.1.1"
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
       - name: Validate all skills (skills-ref)
         run: |
           set -e
+          pip install --user "skills-ref==0.1.1"
+          SKILLS_REF=$(find "$HOME/.local" /usr -name "skills-ref" -type f 2>/dev/null | head -1)
+          echo "Found skills-ref at: $SKILLS_REF"
           for dir in skills/*/; do
             echo "validating $dir"
-            skills-ref validate "$dir"
+            "$SKILLS_REF" validate "$dir"
           done
 
       - name: Validate all skills (bash belt)
