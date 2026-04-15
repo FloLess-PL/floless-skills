@@ -1,0 +1,16 @@
+{
+  "name": "floless",
+  "version": "1.0.0",
+  "description": "Skills for driving the FloLess CLI from AI terminals. Teaches workflow construction, Smart Node C# compilation, Think Node prompts, trigger configuration, and canvas layout for FloLess v1.0+.",
+  "author": {
+    "name": "FloLess",
+    "url": "https://floless.io/"
+  },
+  "repository": "https://github.com/FloLess-PL/floless-skills",
+  "homepage": "https://floless.io/",
+  "license": "MIT",
+  "keywords": [
+    "floless", "workflow", "automation", "aec", "tekla", "excel",
+    "smart-node", "think-node", "cli", "claude-code"
+  ]
+}

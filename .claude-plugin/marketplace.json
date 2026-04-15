@@ -1,0 +1,15 @@
+{
+  "name": "floless-skills",
+  "owner": {
+    "name": "FloLess",
+    "url": "https://floless.io/"
+  },
+  "plugins": [
+    {
+      "name": "floless",
+      "source": "./",
+      "description": "Claude Skills for FloLess workflow automation",
+      "version": "1.0.0"
+    }
+  ]
+}

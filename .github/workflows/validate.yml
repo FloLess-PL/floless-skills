@@ -1,0 +1,41 @@
+name: validate skills
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: "0 9 * * 1"   # every Monday at 09:00 UTC (weekly per D-11a)
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install skills-ref (pinned alpha)
+        run: pip install "skills-ref==0.1.1"
+
+      - name: Validate all skills (skills-ref)
+        run: |
+          set -e
+          for dir in skills/*/; do
+            echo "validating $dir"
+            skills-ref validate "$dir"
+          done
+
+      - name: Validate all skills (bash belt)
+        run: |
+          set -e
+          bash scripts/validate-frontmatter.sh skills/*/
+
+      - name: Validate plugin + marketplace manifests
+        run: |
+          # Lightweight JSON syntax check (full validation requires Claude Code binary
+          # which isn't on GH runners; structural lint is sufficient here)
+          jq . .claude-plugin/plugin.json > /dev/null
+          jq . .claude-plugin/marketplace.json > /dev/null
