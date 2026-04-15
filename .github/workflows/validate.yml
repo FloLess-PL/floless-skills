@@ -25,7 +25,7 @@ jobs:
           set -e
           for dir in skills/*/; do
             echo "validating $dir"
-            skills-ref validate "$dir"
+            python -m skills_ref validate "$dir"
           done
 
       - name: Validate all skills (bash belt)
