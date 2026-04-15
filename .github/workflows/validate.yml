@@ -18,19 +18,20 @@ jobs:
           python-version: "3.13"
 
       - name: Install skills-ref (pinned alpha)
-        run: |
-          pip install "skills-ref==0.1.1"
-          # Add the Python scripts directory to PATH for subsequent steps
-          SCRIPTS_DIR=$(python -c "import sysconfig; print(sysconfig.get_path('scripts'))")
-          echo "skills-ref scripts dir: $SCRIPTS_DIR"
-          echo "$SCRIPTS_DIR" >> $GITHUB_PATH
+        run: pip install "skills-ref==0.1.1"
 
       - name: Validate all skills (skills-ref)
         run: |
           set -e
+          SKILLS_REF=$(python -c "import shutil; print(shutil.which('skills-ref') or '')")
+          if [ -z "$SKILLS_REF" ]; then
+            SCRIPTS=$(python -c "import sysconfig; print(sysconfig.get_path('scripts'))")
+            SKILLS_REF="$SCRIPTS/skills-ref"
+          fi
+          echo "Using skills-ref at: $SKILLS_REF"
           for dir in skills/*/; do
             echo "validating $dir"
-            skills-ref validate "$dir"
+            "$SKILLS_REF" validate "$dir"
           done
 
       - name: Validate all skills (bash belt)
