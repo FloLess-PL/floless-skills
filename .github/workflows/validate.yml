@@ -23,15 +23,22 @@ jobs:
       - name: Validate all skills (skills-ref)
         run: |
           set -e
-          SKILLS_REF=$(python -c "import shutil; print(shutil.which('skills-ref') or '')")
-          if [ -z "$SKILLS_REF" ]; then
-            SCRIPTS=$(python -c "import sysconfig; print(sysconfig.get_path('scripts'))")
-            SKILLS_REF="$SCRIPTS/skills-ref"
-          fi
-          echo "Using skills-ref at: $SKILLS_REF"
+          # Debug: find where skills-ref was installed
+          pip show skills-ref
+          find / -name "skills-ref" -type f 2>/dev/null || true
+          SKILLS_REF=$(pip show -f skills-ref | grep "^Location:" | awk '{print $2}')
+          echo "Package location: $SKILLS_REF"
+          ls -la "$(pip show skills-ref | grep '^Location' | cut -d' ' -f2-)/../../../bin/" 2>/dev/null | grep skills || true
+          # Run via the entry point directly
+          ENTRY=$(pip show -f skills-ref 2>/dev/null | grep "\.\.\/\.\.\//bin/skills-ref" | tr -d ' ')
+          echo "Entry: $ENTRY"
           for dir in skills/*/; do
             echo "validating $dir"
-            "$SKILLS_REF" validate "$dir"
+            skills-ref validate "$dir" || python -c "
+import subprocess, sys, pip, importlib
+result = subprocess.run(['python', '-m', 'skills_ref', 'validate', '$dir'])
+sys.exit(result.returncode)
+"
           done
 
       - name: Validate all skills (bash belt)
