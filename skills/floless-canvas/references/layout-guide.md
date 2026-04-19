@@ -11,8 +11,8 @@ fan-out or fan-in topologies, or needing the exact CLI flags for setting node po
 | Property         | Value                                              |
 |------------------|----------------------------------------------------|
 | Origin           | (0, 0) — top-left corner of the canvas             |
-| X direction      | Increases rightward (positive X = further right)   |
-| Y direction      | Increases downward (positive Y = further down)     |
+| Primary flow axis| Y — increases downward (downstream = higher Y)     |
+| Branch axis      | X — increases rightward (used for parallel branches)|
 | Units            | Device-independent pixels (DIPs)                  |
 | Default zoom     | 1.0 (no scaling; stored coordinates are absolute)  |
 | Viewport offset  | Cosmetic only; does not affect stored X/Y values   |
@@ -64,14 +64,14 @@ authoritative per-node port counts.
 
 ### Pattern 1: Linear flow
 
-Trigger → Action → Display in a straight horizontal line.
+Trigger → Action → Display as a vertical column.
 
 ```json
 {
   "Nodes": [
-    { "Id": "a1b2c3d4-0000-0000-0000-000000000001", "Type": "Trigger",  "X": 0,   "Y": 0 },
-    { "Id": "a1b2c3d4-0000-0000-0000-000000000002", "Type": "Action",   "X": 200, "Y": 0 },
-    { "Id": "a1b2c3d4-0000-0000-0000-000000000003", "Type": "Display",  "X": 400, "Y": 0 }
+    { "Id": "a1b2c3d4-0000-0000-0000-000000000001", "Type": "Trigger",  "X": 0, "Y": 0   },
+    { "Id": "a1b2c3d4-0000-0000-0000-000000000002", "Type": "Action",   "X": 0, "Y": 200 },
+    { "Id": "a1b2c3d4-0000-0000-0000-000000000003", "Type": "Display",  "X": 0, "Y": 400 }
   ],
   "Connections": [
     { "SourceNodeId": "a1b2c3d4-0000-0000-0000-000000000001", "SourcePortIndex": 0,
@@ -82,20 +82,20 @@ Trigger → Action → Display in a straight horizontal line.
 }
 ```
 
-Node coordinates: (0,0) → (200,0) → (400,0). Horizontal spacing: 200px.
+Node coordinates: (0,0) → (0,200) → (0,400). Vertical spacing: 200px.
 
 ### Pattern 2: Branching flow (Condition)
 
 Trigger → Condition → Action-true + Action-false → Display-true + Display-false.
 
-| Node         | Type      | x   | y   |
-|--------------|-----------|-----|-----|
-| Trigger      | Trigger   | 0   | 0   |
-| Condition    | Condition | 200 | 0   |
-| Action-true  | Action    | 400 | 0   |
-| Action-false | Action    | 400 | 100 |
-| Display-true | Display   | 600 | 0   |
-| Display-false| Display   | 600 | 100 |
+| Node         | Type      | x    | y   |
+|--------------|-----------|------|-----|
+| Trigger      | Trigger   | 0    | 0   |
+| Condition    | Condition | 0    | 200 |
+| Action-true  | Action    | -150 | 400 |
+| Action-false | Action    | 150  | 400 |
+| Display-true | Display   | -150 | 600 |
+| Display-false| Display   | 150  | 600 |
 
 Connections:
 - Trigger(out:0) → Condition(in:0)
@@ -104,19 +104,20 @@ Connections:
 - Action-true(out:0) → Display-true(in:0)
 - Action-false(out:0) → Display-false(in:0)
 
-Branch vertical offset: 100px. The Condition node sits at the branch origin y=0; the false
-branch shifts down to y=100. Both Display terminators stay at the rightmost X (600).
+Branch horizontal offset: ±150px around the parent X. The Condition node sits at the branch origin
+(x=0, y=200); true branch shifts left (x=-150), false branch shifts right (x=150). Both Display
+terminators stay at the bottommost Y (600) in their respective branch columns.
 
 ### Pattern 3: Parallel fan-out
 
 Trigger → Action-A + Action-B + Action-C (three parallel branches).
 
-| Node     | Type    | x   | y   |
-|----------|---------|-----|-----|
-| Trigger  | Trigger | 0   | 0   |
-| Action-A | Action  | 200 | 0   |
-| Action-B | Action  | 200 | 100 |
-| Action-C | Action  | 200 | 200 |
+| Node     | Type    | x    | y   |
+|----------|---------|------|-----|
+| Trigger  | Trigger | 0    | 0   |
+| Action-A | Action  | -300 | 200 |
+| Action-B | Action  | 0    | 200 |
+| Action-C | Action  | 300  | 200 |
 
 The Trigger connects its single output port (0) to each Action's input port (0). One source
 port can fan out to multiple targets — FloLess allows multiple connections from a single
@@ -127,22 +128,22 @@ Connections:
 - Trigger(out:0) → Action-B(in:0)
 - Trigger(out:0) → Action-C(in:0)
 
-Vertical stride: 100px between parallel actions (y=0, y=100, y=200).
+Horizontal stride: 300px between parallel actions (x=-300, x=0, x=300), centered on the Trigger's X.
 
 ### Pattern 4: Aggregator convergence (fan-in)
 
 Action-A + Action-B + Action-C → Aggregator → Display.
 
-| Node        | Type        | x   | y   |
-|-------------|-------------|-----|-----|
-| Action-A    | Action      | 0   | 0   |
-| Action-B    | Action      | 0   | 100 |
-| Action-C    | Action      | 0   | 200 |
-| Aggregator  | Aggregator  | 200 | 100 |
-| Display     | Display     | 400 | 100 |
+| Node        | Type        | x    | y   |
+|-------------|-------------|------|-----|
+| Action-A    | Action      | -300 | 0   |
+| Action-B    | Action      | 0    | 0   |
+| Action-C    | Action      | 300  | 0   |
+| Aggregator  | Aggregator  | 0    | 200 |
+| Display     | Display     | 0    | 400 |
 
-Place the Aggregator at the vertical midpoint of its inputs (y=100 for three inputs at y=0,
-y=100, y=200). Connections from each Action output(0) to Aggregator input ports.
+Place the Aggregator at the horizontal midpoint of its inputs (x=0 for three inputs at
+x=-300, x=0, x=300). Connections from each Action output(0) to Aggregator input ports.
 
 Connections:
 - Action-A(out:0) → Aggregator(in:0)
@@ -156,19 +157,20 @@ Connections:
 
 **(a) All nodes at (0,0)**
 Every node occupies the same position. The canvas shows a single stacked rectangle. Fix: apply
-200px horizontal stepping from the Trigger origin.
+200px vertical stepping from the Trigger origin.
 
-**(b) Right-to-left flow**
-X values decrease along the data flow direction. Humans read left-to-right; reversing this makes
-workflows impossible to review. Fix: always increase X downstream.
+**(b) Left-to-right flow**
+X values increase along the linear data flow direction, producing a sideways layout. FloLess
+canvases are designed to read top-to-bottom; horizontal flows contradict the canonical direction
+and make reviews harder. Fix: always increase Y (not X) as the flow progresses downstream.
 
 **(c) Inconsistent spacing**
-Mixing 50px, 150px, and 400px gaps produces a chaotic layout. Fix: use exactly 200px horizontal
-and 100px vertical throughout the workflow.
+Mixing 50px, 150px, and 400px gaps produces a chaotic layout. Fix: use exactly 200px vertical
+between sequential nodes and 300px horizontal between parallel branches throughout the workflow.
 
 **(d) Display terminator in the middle of a flow**
-Placing a Display node at x=200 with an Action at x=400 is structurally impossible — Display
-has no output ports. Fix: always place Display at the rightmost X of its branch.
+Placing a Display node at y=200 with an Action at y=400 is structurally impossible — Display
+has no output ports. Fix: always place Display at the bottommost Y of its branch.
 
 **(e) Orphaned nodes with no connections**
 Nodes that have no connections float at their position and produce visual clutter. Fix: either
@@ -186,8 +188,8 @@ To set node positions when building via Flow B (augmenting the loaded current wo
 
 ```bash
 floless workflow add-node --workflow current --type Trigger --component-id {triggerId} --x 0 --y 0 --json
-floless workflow add-node --workflow current --type Action --component-id {actionId} --x 200 --y 0 --json
-floless workflow add-node --workflow current --type Display --x 400 --y 0 --json
+floless workflow add-node --workflow current --type Action --component-id {actionId} --x 0 --y 200 --json
+floless workflow add-node --workflow current --type Display --x 0 --y 400 --json
 ```
 
 The `--x` and `--y` options accept floating-point values. If omitted, the desktop places the node

@@ -359,9 +359,9 @@ floless workflow save-as --output augmented-workflow.flo --json
 
 - **Always include `Version`** — missing Version is the most common validation failure.
   Use `"1.0.0"` unless you have a specific reason for another value.
-- **Set positions with `--x`/`--y`** — avoid placing all nodes at (0, 0). A left-to-right
-  layout with 250 px horizontal spacing and 100 px vertical spacing is readable in the desktop.
-  See the `floless-canvas` skill for the full layout guide.
+- **Set positions with `--x`/`--y`** — avoid placing all nodes at (0, 0). A top-to-bottom
+  layout with 200 px vertical stepping (and 300 px horizontal offset between parallel branches)
+  is readable in the desktop. See the `floless-canvas` skill for the full layout guide.
 - **Prefer SmartNode over ThinkNode for static logic** — SmartNode C# code runs fast with no
   LLM latency or cost. Use ThinkNode when the task genuinely requires natural language
   understanding at execution time. See the `floless-smart-nodes` skill for the
