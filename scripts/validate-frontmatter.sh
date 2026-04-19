@@ -6,6 +6,10 @@
 #   3. `name` field matches parent directory name
 #   4. `name` is 1-64 chars, kebab-case, no leading/trailing/consecutive hyphens
 #   5. `description` is 1-1024 chars, non-empty
+#   6. Frontmatter is strict-YAML parseable (catches unquoted `: ` in descriptions,
+#      which otherwise silently produces a broken Skill tool description and
+#      blocks auto-activation). Requires python with PyYAML; skipped with a
+#      warning if unavailable.
 # Exits 0 on all-green, 1 on any failure, 2 on usage error.
 set -euo pipefail
 
@@ -49,6 +53,33 @@ for dir in "$@"; do
   fi
   if [ "$desc_len" -gt 1024 ]; then
     echo "FAIL $skill_name: description length $desc_len > 1024"; rc=1; continue
+  fi
+
+  # Strict YAML parse — catches unquoted `: ` which breaks the Skill tool's description field
+  if command -v python >/dev/null 2>&1; then py=python
+  elif command -v python3 >/dev/null 2>&1; then py=python3
+  else py=""; fi
+  if [ -n "$py" ]; then
+    if ! "$py" -c "
+import sys, yaml, re
+with open(r'''$file''', encoding='utf-8') as f:
+    content = f.read()
+m = re.match(r'---\r?\n(.*?)\r?\n---', content, re.DOTALL)
+if not m:
+    sys.exit(10)
+try:
+    data = yaml.safe_load(m.group(1))
+    if not isinstance(data, dict):
+        sys.exit(11)
+    if not isinstance(data.get('description', ''), str) or not data.get('description'):
+        sys.exit(12)
+except yaml.YAMLError as e:
+    print('YAML error: ' + str(e).splitlines()[0], file=sys.stderr)
+    sys.exit(13)
+" 2>/tmp/yaml-err.$$; then
+      err="$(cat /tmp/yaml-err.$$ 2>/dev/null || true)"; rm -f /tmp/yaml-err.$$
+      echo "FAIL $skill_name: strict YAML parse failed${err:+ — }${err}"; rc=1; continue
+    fi
   fi
 
   echo "OK   $skill_name"

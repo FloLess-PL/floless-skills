@@ -1,6 +1,6 @@
 ---
 name: floless-smart-nodes
-description: Write FloLess Smart Nodes — compiled C# code for deterministic, zero-cost-per-execution workflow logic. Use when writing or fixing Smart Node code, running the compile-fix loop, choosing target frameworks (net8.0 vs net48 for Tekla), pinning software versions (tekla-2025), or iterating on compilation diagnostics. Covers the full diagnostic sequence: workflow nodes → node-context → compile → nodeUpdated.
+description: "Write FloLess Smart Nodes — compiled C# code for deterministic, zero-cost-per-execution workflow logic. Use when writing or fixing Smart Node code, running the compile-fix loop, choosing target frameworks (net8.0 vs net48 for Tekla), pinning software versions (tekla-2025), or iterating on compilation diagnostics. Covers the full diagnostic sequence — workflow nodes → node-context → compile → nodeUpdated."
 license: MIT
 compatibility: Requires FloLess desktop app running and floless CLI installed. Windows only.
 metadata:

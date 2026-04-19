@@ -1,6 +1,6 @@
 ---
 name: floless-think-nodes
-description: Configure FloLess Think Nodes — LLM-per-execution nodes for prompts, classification, summarization, extraction, and translation. Use when authoring or updating Think Node configuration, writing prompt templates, selecting models and temperature, managing I/O schemas, or using the update-think-node PATCH semantics. Also covers the Smart vs Think decision rule: prefer Smart Nodes (deterministic C#) when logic is static.
+description: "Configure FloLess Think Nodes — LLM-per-execution nodes for prompts, classification, summarization, extraction, and translation. Use when authoring or updating Think Node configuration, writing prompt templates, selecting models and temperature, managing I/O schemas, or using the update-think-node PATCH semantics. Also covers the Smart vs Think decision rule — prefer Smart Nodes (deterministic C#) when logic is static."
 license: MIT
 compatibility: Requires FloLess desktop app running and floless CLI installed. Windows only.
 metadata:

@@ -1,6 +1,6 @@
 ---
 name: floless-triggers
-description: Discover and configure FloLess trigger nodes. Use when picking a trigger for a workflow, setting trigger fields, referencing trigger output in downstream nodes, or understanding provider-specific trigger behavior. Covers 45+ trigger types grouped by provider: Excel (cell change), File (folder watcher), Schedule (cron/interval), Email (IMAP), Tekla (drawing events, model events, selection events, clash events), and Trimble Connect (BCF topics). Run `floless triggers --json` to list all triggers or `floless triggers --json --provider <name>` to filter by provider.
+description: "Discover and configure FloLess trigger nodes. Use when picking a trigger for a workflow, setting trigger fields, referencing trigger output in downstream nodes, or understanding provider-specific trigger behavior. Covers 45+ trigger types grouped by provider — Excel (cell change), File (folder watcher), Schedule (cron/interval), Email (IMAP), Tekla (drawing events, model events, selection events, clash events), and Trimble Connect (BCF topics). Run `floless triggers --json` to list all triggers or `floless triggers --json --provider <name>` to filter by provider."
 license: MIT
 compatibility: Requires FloLess desktop app running and floless CLI installed. Windows only.
 metadata:

@@ -1,6 +1,6 @@
 ---
 name: floless-workflows
-description: Build and modify FloLess workflows (.flo files) from any AI terminal. Use when creating a workflow from scratch (Flow A), augmenting a workflow loaded in the desktop (Flow B), running or stopping a workflow headlessly, validating workflow JSON, or passing variables between nodes with {{trigger.cellValue}}/{{action1.result}} templating. Covers all 17 workflow subcommands: create, validate, info, list, nodes, node-context, add-node, delete-node, connect, disconnect, update-think-node, export, open, save, save-as, run, stop.
+description: "Build and modify FloLess workflows (.flo files) from any AI terminal. Use when creating a workflow from scratch (Flow A), augmenting a workflow loaded in the desktop (Flow B), running or stopping a workflow headlessly, validating workflow JSON, or passing variables between nodes with {{trigger.cellValue}}/{{action1.result}} templating. Covers all 17 workflow subcommands — create, validate, info, list, nodes, node-context, add-node, delete-node, connect, disconnect, update-think-node, export, open, save, save-as, run, stop."
 license: MIT
 compatibility: Requires FloLess desktop app running and floless CLI installed. Windows only.
 metadata:
