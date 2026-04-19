@@ -115,22 +115,37 @@ Use Flow A when no workflow is open in the desktop, or when you want to produce 
 4. The user opens `first.flo` in the desktop (or use `floless workflow open --path first.flo --json`).
 5. The workflow appears on the canvas, ready to run.
 
-**Variable references in Flow A:** Use `{trigger.{fieldName}}` and `{action{N}.result}` in Action inputs to wire data between nodes. The runtime evaluates these at execution time.
+**Variable references in Flow A:** Use `{{trigger.fieldName}}` and `{{action1.result}}` (double braces) in Action and Display configs to wire data between nodes. The runtime evaluates these at execution time.
 
-**Example workflow shape (Excel trigger → Display):**
+**Example workflow shape (Excel trigger → Text Panel display):**
 
 ```json
 {
-  "name": "My First Workflow",
-  "nodes": [
-    { "id": "t1", "type": "ExcelCellChangeTrigger", "x": 100, "y": 100, "config": { "filePath": "C:\\data.xlsx", "cellAddress": "A1" } },
-    { "id": "d1", "type": "Display", "x": 400, "y": 100, "config": { "message": "Cell changed: {trigger.cellValue}" } }
+  "Version": "1.0.0",
+  "Name": "My First Workflow",
+  "Nodes": [
+    {
+      "Id": "trigger-1",
+      "NodeType": "Trigger",
+      "X": 0, "Y": 0,
+      "ComponentId": "excel-cell-changed",
+      "Config": { "filePath": "C:\\data.xlsx", "sheetName": "Sheet1", "cellAddress": "A1" }
+    },
+    {
+      "Id": "display-1",
+      "NodeType": "Display",
+      "X": 0, "Y": 200,
+      "ComponentId": "multiline-text",
+      "Config": { "text": "Cell changed: {{trigger.cellValue}}" }
+    }
   ],
-  "connections": [
-    { "from": "t1", "fromPort": 0, "to": "d1", "toPort": 0 }
+  "Connections": [
+    { "SourceNodeId": "trigger-1", "SourcePortIndex": 0, "TargetNodeId": "display-1", "TargetPortIndex": 0 }
   ]
 }
 ```
+
+All fields are PascalCase (`Nodes`, `Connections`, `NodeType`, `ComponentId`, `Config`, `Version`). `ComponentId` is the kebab-case slug of a real component — verify with `floless nodes --json`, `floless triggers --json`, or `floless component <id> --json`. Never invent names like `ExcelCellChangeTrigger`.
 
 ### Flow B — Augment the live workflow
 
@@ -175,13 +190,13 @@ This walkthrough creates a minimal Excel-to-Display workflow using Flow A.
    ```
    floless triggers --json --provider excel
    ```
-   Note the `type` field of the trigger you want to use (e.g., `ExcelCellChangeTrigger`).
+   Note the `componentId` field of the trigger you want to use (e.g., `excel-cell-changed`). This kebab-case slug is what you put in the workflow JSON's `ComponentId` field.
 
 4. **Browse available actions for Tekla** (or another provider):
    ```
    floless actions --json --provider tekla
    ```
-   Note the `type` field of the action you want to chain.
+   Note the `componentId` field of the action you want to chain.
 
 5. **Fetch the workflow JSON schema:**
    ```
@@ -191,19 +206,30 @@ This walkthrough creates a minimal Excel-to-Display workflow using Flow A.
 
 6. **Construct a minimal workflow JSON:**
 
-   Create `workflow.json` with one Trigger → one Display (the simplest valid workflow):
+   Create `workflow.json` with one Trigger → one Display (the simplest valid workflow). Schema is PascalCase; `ComponentId` must reference a real component from `floless triggers --json` / `floless component <id> --json`:
 
    ```json
    {
-     "name": "First Workflow",
-     "nodes": [
-       { "id": "t1", "type": "ExcelCellChangeTrigger", "x": 100, "y": 100,
-         "config": { "filePath": "C:\\Users\\you\\data.xlsx", "cellAddress": "B2" } },
-       { "id": "d1", "type": "Display", "x": 400, "y": 100,
-         "config": { "message": "Excel changed: {trigger.cellValue}" } }
+     "Version": "1.0.0",
+     "Name": "First Workflow",
+     "Nodes": [
+       {
+         "Id": "trigger-1",
+         "NodeType": "Trigger",
+         "X": 0, "Y": 0,
+         "ComponentId": "excel-cell-changed",
+         "Config": { "filePath": "C:\\Users\\you\\data.xlsx", "sheetName": "Sheet1", "cellAddress": "B2" }
+       },
+       {
+         "Id": "display-1",
+         "NodeType": "Display",
+         "X": 0, "Y": 200,
+         "ComponentId": "multiline-text",
+         "Config": { "text": "Excel changed: {{trigger.cellValue}}" }
+       }
      ],
-     "connections": [
-       { "from": "t1", "fromPort": 0, "to": "d1", "toPort": 0 }
+     "Connections": [
+       { "SourceNodeId": "trigger-1", "SourcePortIndex": 0, "TargetNodeId": "display-1", "TargetPortIndex": 0 }
      ]
    }
    ```
@@ -266,7 +292,7 @@ This overview skill deliberately omits deep technical content that belongs in sp
 | Desktop lifecycle (`floless start`, `floless close`) | `floless-cli` |
 | `.flo` JSON schema in full | `floless-workflows` |
 | Flow B mutation commands in depth (`add-node`, `connect`, `disconnect`, `node-context`) | `floless-workflows` |
-| Variable templating (`{trigger.cellValue}`, `{action1.result}`) | `floless-workflows` |
+| Variable templating (`{{trigger.cellValue}}`, `{{action1.result}}`) | `floless-workflows` |
 | Workflow execution control (`workflow run`, `workflow stop`) | `floless-workflows` |
 | C# Smart Node entry point, ports, compile-fix loop | `floless-smart-nodes` |
 | Think Node prompt templates, model selection, I/O schemas | `floless-think-nodes` |

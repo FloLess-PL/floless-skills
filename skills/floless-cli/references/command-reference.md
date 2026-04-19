@@ -305,7 +305,7 @@ floless workflow nodes --workflow current --json
 floless workflow nodes --workflow wf-abc-123 --json
 ```
 
-Output: `{ "success": true, "data": [{ "id": "node-xyz-789", "type": "SmartNode", "display": "Process Beams", "x": 400.0, "y": 200.0 }], "count": 5 }`
+Output: `{ "success": true, "data": [{ "id": "node-xyz-789", "nodeType": "SmartNode", "title": "Process Beams", "x": 400.0, "y": 200.0, "componentId": null }], "count": 5 }`
 
 ---
 
@@ -319,7 +319,7 @@ Options: `--workflow <id>` (required), `--node <id>` (required), `--json`
 floless workflow node-context --workflow current --node node-xyz-789 --json
 ```
 
-Output: `{ "success": true, "data": { "id": "node-xyz-789", "type": "SmartNode", "display": "Process Beams", "code": "...", "instructions": "...", "targetFramework": "net8.0", "inPorts": [...], "outPorts": [...] } }`
+Output: `{ "success": true, "data": { "id": "node-xyz-789", "nodeType": "SmartNode", "title": "Process Beams", "code": "...", "instructions": "...", "targetFramework": "net8.0", "inPorts": [...], "outPorts": [...] } }`
 
 ---
 
