@@ -36,6 +36,28 @@ Use this skill when you need to:
 - Discover available skill packs (`floless skills --json`) or templates (`floless templates --type smart --json`)
 - Iterate the compile-fix loop until `data.compiled` is `true`
 
+## CRITICAL: SmartNodeInputSchema and SmartNodeOutputSchema use PascalCase keys
+
+The `.flo` JSON fields `SmartNodeInputSchema` and `SmartNodeOutputSchema` carry a
+**JSON-encoded string** of `List<InputFieldSchema>`. That schema model uses **PascalCase
+property names** (`Name`, `Label`, `Type`, `Required`, `Description`, `DefaultValue`,
+`Options`, `Value`) — NOT lowercase. FloLess deserializes case-sensitively, so a schema
+written with lowercase `name`/`type` produces empty `Name` strings, and the Smart Node
+editor's "Edit Input Fields" dialog shows entries with no name — just the type pill.
+
+```json
+// CORRECT — PascalCase, matches InputFieldSchema in the FloLess source
+"SmartNodeInputSchema": "[{\"Name\":\"filePath\",\"Label\":\"File Path\",\"Type\":\"string\",\"Required\":true,\"Description\":\"…\"}]"
+
+// WRONG — lowercase: deserializes to InputFieldSchema with Name=\"\", Type=\"string\" defaults
+"SmartNodeInputSchema": "[{\"name\":\"filePath\",\"type\":\"string\",\"required\":true}]"
+```
+
+The supported `Type` values per the source are: `"string"`, `"number"`, `"boolean"`,
+`"dropdown"`, `"FloImage"`. For dropdowns, also populate `Options: [...]`.
+
+Same rule applies to `SmartNodeOutputSchema` — same `InputFieldSchema` model, same casing.
+
 ## CRITICAL: input keys must match the upstream node's output-field names
 
 > **The single biggest mistake AI agents make on Smart Nodes — including in early v0.9 of this skill itself — is inventing custom input names that don't match the upstream component's output schema.**
