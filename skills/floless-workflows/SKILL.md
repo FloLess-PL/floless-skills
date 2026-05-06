@@ -14,7 +14,10 @@ allowed-tools: Bash(floless:*) Read Write
 
 FloLess workflows are JSON files with a `.flo` extension. They describe a directed graph of nodes
 (Trigger, Action, SmartNode, ThinkNode, Condition, Display, etc.) connected by typed edges.
-Every workflow must have exactly one Trigger node, at least one other node, and a Version field.
+Every workflow must have at least one Trigger node, at least one other node, and a Version field.
+**Multiple Trigger nodes in the same workflow are supported** — each becomes an independent
+fire-and-forget branch that runs on its own event. `floless workflow validate` returns
+`valid: true` for any number of triggers ≥ 1.
 
 This skill covers **two fundamental authoring flows** plus lifecycle and execution control:
 
@@ -85,7 +88,7 @@ floless schema --type workflow --json
 Hand-construct the JSON according to the schema. Key rules:
 
 - `Version` is required (use `"1.0"`)
-- `Nodes` must have at least 1 node; exactly 1 must be a Trigger
+- `Nodes` must have at least 1 node; at least 1 must be a Trigger (more than 1 is supported — each fires independently)
 - All node `Id` values must be non-empty and unique (GUIDs recommended)
 - All `NodeType` values must be valid (server enforces via `NodeTypeRegistry`)
 - Connections reference existing node IDs; no cycles allowed
@@ -269,7 +272,7 @@ Run `floless workflow validate file.json --json` to get a structured report.
 |---|---|
 | `Version` required | Must be present (use `"1.0"`) |
 | At least 1 node | `Nodes` array cannot be empty |
-| Exactly 1 Trigger | Workflow cannot have 0 or 2+ Trigger nodes |
+| At least 1 Trigger | Workflow must have ≥ 1 Trigger node. Multiple triggers are supported — each fires independently. |
 | No empty node IDs | Every node `Id` must be a non-empty string |
 | No duplicate node IDs | All `Id` values must be unique within `Nodes` |
 | Valid `NodeType` | Must match values in `NodeTypeRegistry` (see schema reference) |
