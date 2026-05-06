@@ -36,6 +36,53 @@ Use this skill when you need to:
 - Discover available skill packs (`floless skills --json`) or templates (`floless templates --type smart --json`)
 - Iterate the compile-fix loop until `data.compiled` is `true`
 
+## CRITICAL: input keys must match the upstream node's output-field names
+
+> **The single biggest mistake AI agents make on Smart Nodes — including in early v0.9 of this skill itself — is inventing custom input names that don't match the upstream component's output schema.**
+
+FloLess does NOT rename values across a connection. When a Folder Watcher trigger fires, the Smart Node receives an `inputs` dictionary populated **directly with the trigger's output-field names**:
+
+```csharp
+// Folder Watcher publishes: filePath, fileName, extension, folderPath, changeType, …
+// (run `floless component folder-watcher --json` for the full output list)
+
+// CORRECT — read by the upstream output-field name
+inputs.TryGetValue("filePath", out var path);
+
+// WRONG — there is no key "jFilePath" in inputs[]; this returns false silently
+inputs.TryGetValue("jFilePath", out var path);
+```
+
+Before writing any `inputs.TryGetValue("…")` call, **discover the actual output-field names of every upstream node**:
+
+| Upstream node type | How to discover its output-field names |
+|---|---|
+| Trigger | `floless component <componentId> --json` → `outputs[].name` |
+| Action | `floless component <componentId> --json` → `outputs[].name` |
+| SmartNode | `floless workflow node-context --workflow current --node {id} --json` → `outputSchema` (the keys the upstream Smart Node returns from its `Dictionary<string, object>`) |
+| ThinkNode | same as SmartNode — inspect via `node-context` |
+
+The Smart Node's own `SmartNodeInputSchema` field in the `.flo` declares **the names you intend to read**. If those names don't match anything upstream, the editor shows the input fields as empty/unwired and the runtime quietly delivers nothing — there's no error, the values are just absent. Always cross-check the schema you write against the actual upstream output names.
+
+Helper for the most common case (single Folder Watcher → SmartNode):
+
+```bash
+# List Folder Watcher output names — the keys you can read in inputs[]
+floless component folder-watcher --json | \
+  python -c "import sys,json; print('\n'.join(o['name'] for o in json.load(sys.stdin)['data']['outputs']))"
+# → filePath, fileName, fileNameWithoutExtension, extension, folderPath,
+#   relativePath, changeType, oldFilePath, oldFileName, fileSize,
+#   lastModified, createdAt, timestamp, files, fileCount
+```
+
+When you need a custom name in your code, **rename in your code**, not in your input schema:
+
+```csharp
+// Read by the upstream's name, then alias to whatever's clearer locally:
+if (inputs.TryGetValue("filePath", out var raw) is false) return Error("...");
+var jFilePath = raw.ToString();   // local alias, not an input key
+```
+
 ## Smart Node vs Think Node — when to choose
 
 | Criterion | Smart Node (C#) | Think Node (LLM) |
