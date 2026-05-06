@@ -22,7 +22,8 @@ Demonstrates the required fields and the simplest possible topology.
     {
       "Id": "node-trigger-1",
       "NodeType": "Trigger",
-      "Description": "Excel Cell Changed",
+      "Title": "Excel Cell Changed",
+      "Description": "Watch the loads cell",
       "ComponentId": "excel-cell-changed",
       "X": 900,
       "Y": 300,
@@ -35,6 +36,7 @@ Demonstrates the required fields and the simplest possible topology.
     {
       "Id": "node-display-1",
       "NodeType": "Display",
+      "Title": "Display",
       "Description": "Result",
       "X": 900,
       "Y": 500
@@ -83,7 +85,8 @@ Variable templating passes `{{trigger.cellValue}}` into the Condition expression
     {
       "Id": "trigger-excel",
       "NodeType": "Trigger",
-      "Description": "Excel Cell Changed",
+      "Title": "Excel Cell Changed",
+      "Description": "Watch the loads cell",
       "ComponentId": "excel-cell-changed",
       "X": 900,
       "Y": 300,
@@ -96,6 +99,7 @@ Variable templating passes `{{trigger.cellValue}}` into the Condition expression
     {
       "Id": "condition-threshold",
       "NodeType": "Condition",
+      "Title": "Condition",
       "Description": "Value > 100?",
       "X": 900,
       "Y": 500,
@@ -106,7 +110,8 @@ Variable templating passes `{{trigger.cellValue}}` into the Condition expression
     {
       "Id": "action-create-beam",
       "NodeType": "Action",
-      "Description": "Create Tekla Beam",
+      "Title": "Create Tekla Beam",
+      "Description": "Create HEA200 beam",
       "ComponentId": "tekla-create-beam",
       "X": 750,
       "Y": 700,
@@ -119,6 +124,7 @@ Variable templating passes `{{trigger.cellValue}}` into the Condition expression
     {
       "Id": "action-log-skip",
       "NodeType": "Action",
+      "Title": "Log",
       "Description": "Log Skipped",
       "ComponentId": "log",
       "X": 1050,
@@ -130,6 +136,7 @@ Variable templating passes `{{trigger.cellValue}}` into the Condition expression
     {
       "Id": "display-result",
       "NodeType": "Display",
+      "Title": "Display",
       "Description": "Result",
       "X": 900,
       "Y": 900
@@ -193,6 +200,7 @@ to the next via `{{actionTitle.result}}` template syntax.
     {
       "Id": "trigger-folder",
       "NodeType": "Trigger",
+      "Title": "Folder Watcher",
       "Description": "New File Detected",
       "ComponentId": "folder-watcher",
       "X": 900,
@@ -205,7 +213,8 @@ to the next via `{{actionTitle.result}}` template syntax.
     {
       "Id": "action-read",
       "NodeType": "Action",
-      "Description": "Read File",
+      "Title": "Read File",
+      "Description": "Read incoming PDF",
       "ComponentId": "file-read",
       "X": 900,
       "Y": 500,
@@ -216,6 +225,7 @@ to the next via `{{actionTitle.result}}` template syntax.
     {
       "Id": "think-summarize",
       "NodeType": "ThinkNode",
+      "Title": "Think Node",
       "Description": "Summarize",
       "X": 900,
       "Y": 700,
@@ -227,7 +237,8 @@ to the next via `{{actionTitle.result}}` template syntax.
     {
       "Id": "action-email",
       "NodeType": "Action",
-      "Description": "Send Email",
+      "Title": "Send Email",
+      "Description": "Email summary to team",
       "ComponentId": "email-send",
       "X": 900,
       "Y": 900,
@@ -240,6 +251,7 @@ to the next via `{{actionTitle.result}}` template syntax.
     {
       "Id": "display-done",
       "NodeType": "Display",
+      "Title": "Display",
       "Description": "Done",
       "X": 900,
       "Y": 1100

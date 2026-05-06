@@ -144,44 +144,63 @@ Place the Trigger near the **canvas centerline**, not at the origin. For the def
 All other nodes are positioned relative to this anchor: downstream nodes step Y by +200;
 parallel branches spread X by ±150 around the parent column.
 
-## Title and Description fields — do not override Title
+## Title and Description fields — set Title to the component name, never to your custom text
 
 The Node JSON has three text fields: `Title`, `Subtitle`, and `Description`. They are NOT
 interchangeable, and AI-authored workflows commonly misuse them.
 
-| Field | Owned by | Purpose | When AI should set it |
-|---|---|---|---|
-| `Title` | The component | Display title shown on the node, defaulted from the component definition (e.g. "Folder Watcher", "Send Email"). | **Never override.** Omit the field entirely — FloLess fills it from the `NodeTypeRegistry` default for the chosen `ComponentId`. Overriding produces a node whose label no longer matches its component, confusing reviewers and breaking visual recognition. |
-| `Subtitle` | The component (rare) | Optional secondary line below the title. | **Never override** unless the user explicitly asks. |
-| `Description` | The user / author | A short user-editable badge rendered above the node. This is the field for "what this instance does in this workflow". | **This is where AI annotations belong.** Use it for purpose-specific text like `"Watch input/ for .j<N>"` or `"Sentinelize"` — anything that distinguishes this instance from a generic component. |
+| Field | What it represents | What AI should put there in Flow A JSON |
+|---|---|---|
+| `Title` | The on-node label users read at a glance — should match the **component's catalog name** so reviewers recognize the node type instantly. | Set it to the component's `name` from `floless component <componentId> --json`. For `folder-watcher` that's `"Folder Watcher"`; for `excel-cell-changed` that's `"Excel Cell Changed"`. For `SmartNode`/`ThinkNode`/`Display`/`Condition` (no `ComponentId`), use the canonical UI label: `"Smart Node"`, `"Think Node"`, `"Display"`, `"Condition"`. |
+| `Subtitle` | Optional secondary line below the title. | Leave empty unless the user explicitly asks. |
+| `Description` | A short author-editable badge rendered above the node. | **This is where your custom annotations belong** — purpose-specific text like `"Watch input/ for .j<N>"` or `"Sentinelize"` that distinguishes this instance from the generic component. |
+
+### Why you must set `Title` explicitly
+
+When you author via `workflow create` (Flow A), **omitting `Title` does NOT fall back to the
+component's catalog name**. FloLess writes the auto-generated node ID (`node_b99c`) on the
+canvas instead. The "defaults to NodeTypeRegistry default" behavior described in
+`floless workflow add-node --title`'s help applies only when adding nodes through the CLI
+or UI — those code paths populate `Title` at insertion time. Static JSON authoring skips
+that step, so you must provide it yourself.
 
 ```json
-// CORRECT
+// CORRECT — Title matches catalog name; Description carries your custom text
 {
   "Id": "trigger-1",
   "NodeType": "Trigger",
   "ComponentId": "folder-watcher",
-  "Description": "Watch input/ for new .j<N> files",
+  "Title": "Folder Watcher",                     // ← from `floless component folder-watcher --json`
+  "Description": "Watch input/ for new .j<N>",   // ← your annotation
   "X": 900, "Y": 300,
   "Config": { ... }
 }
 
-// WRONG — Title overridden, no Description
+// WRONG — Title omitted: node displays "node_<guid>" on canvas
 {
   "Id": "trigger-1",
   "NodeType": "Trigger",
   "ComponentId": "folder-watcher",
-  "Title": "Watch input/ for new .j<N> files",   // ← never do this
+  // Title missing → falls back to node_b99c, not "Folder Watcher"
+  "Description": "Watch input/ for new .j<N>",
+  "X": 900, "Y": 300,
+  "Config": { ... }
+}
+
+// WRONG — Title overridden with custom text: hides the component identity
+{
+  "Id": "trigger-1",
+  "NodeType": "Trigger",
+  "ComponentId": "folder-watcher",
+  "Title": "Watch input/ for new .j<N>",   // ← belongs in Description
   "X": 900, "Y": 300,
   "Config": { ... }
 }
 ```
 
-Same rule applies to `floless workflow add-node`: do **not** pass `--title`. The CLI's own
-help describes it as "Optional node title (defaults to NodeTypeRegistry default)" — that
-default is what the user expects to see. If you need to convey what this instance does,
-include it in the workflow's overall design or in `Description` (set in a follow-up
-`update-node` if/when the CLI exposes that, or directly in the JSON for Flow A authoring).
+When using `floless workflow add-node`, do **not** pass `--title` — that CLI path *does*
+populate the catalog default, and overriding it just to inject custom text reproduces the
+"hides the component identity" bug.
 
 ## Worked example
 
@@ -237,11 +256,18 @@ parent column.
 **7. Overriding `Title` with custom text**
 AI agents commonly try to label what a node does by setting `Title` to something descriptive
 like `"Watch output/ for *.png"`. This breaks the visual contract — the on-node label should
-match the component's default name (`Folder Watcher`, `Send Email`) so reviewers can recognize
-node types at a glance. Fix: omit `Title` entirely (let the `NodeTypeRegistry` default fill
-in), and put your custom text in `Description` instead. See the
-[Title and Description section](#title-and-description-fields--do-not-override-title) for
-the exact field semantics.
+match the component's catalog name (`Folder Watcher`, `Send Email`) so reviewers can recognize
+node types at a glance. Fix: set `Title` to the value of `floless component <componentId> --json`'s
+`name` field (e.g. `"Folder Watcher"`), and put your custom text in `Description` instead.
+
+**7b. Omitting `Title` in Flow A JSON**
+A previous version of this skill said "omit `Title` and let `NodeTypeRegistry` fill it in".
+That advice is **wrong for static JSON authoring (Flow A `workflow create`)**: when `Title`
+is missing, FloLess writes the auto-generated `node_<guid>` ID on the canvas instead of the
+component's display name. `Title` only auto-fills via the `add-node` CLI path or the
+drag-from-panel UI path. For Flow A authoring, always set `Title` explicitly to the catalog
+`name`. See the [Title and Description section](#title-and-description-fields--set-title-to-the-component-name-never-to-your-custom-text)
+for the worked example.
 
 **8. Missing port indexes in connection JSON**
 Omitting `SourcePortIndex` or `TargetPortIndex` fields causes the connection to fail. Fix:
