@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires git and curl on PATH. Works on any platform; install layout detection covers Claude Code, Codex CLI, and OpenCode.
 metadata:
   author: FloLess
-  version: "1.0.0"
+  version: "0.9.11"
   upstream-repo: "FloLess-PL/floless-skills"
 allowed-tools: Bash Read Write AskUserQuestion
 ---
@@ -76,7 +76,7 @@ For `MODE=plugin` and `MODE=git`, read `.version` from `plugin.json`:
 INSTALLED_VERSION=$(node -e "console.log(require('$VERSION_FILE').version)" 2>/dev/null)
 ```
 
-For `MODE=copy`, parse `metadata.version` from the canary `floless-canvas/SKILL.md` frontmatter:
+For `MODE=copy`, parse `metadata.version` from the canary `floless-canvas/SKILL.md` frontmatter. Per the lockstep convention (see *Convention notes*), every skill's `metadata.version` is kept identical to the plugin version on every release, so the canary stands in for the missing `plugin.json`:
 
 ```bash
 INSTALLED_VERSION=$(awk '
@@ -248,6 +248,6 @@ For `MODE=plugin`, the banner instead reminds the user that `/plugin update flol
 
 ## Convention notes
 
-- Versions live in `.claude-plugin/plugin.json` (`.version`) and are mirrored in `.claude-plugin/marketplace.json`. Both must be bumped together when releasing.
-- Each `SKILL.md` also carries `metadata.version` — that is per-skill semver and is independent of the plugin version. We compare the plugin version, not per-skill versions, since the release cadence is per-plugin.
+- **Lockstep versioning** — `plugin.json` (`.version`), `marketplace.json` (the floless plugin entry's `.version`), and *every* `skills/*/SKILL.md` `metadata.version` share a single value. Releases bump them together. `scripts/bump-version.sh` does this in one shot; `scripts/check-version-sync.sh` enforces it in CI.
+- **Why lockstep matters here** — `MODE=copy` installs have no `plugin.json` on disk, so this skill reads the canary skill's `metadata.version` as the installed plugin version. That only works if every skill is in lockstep with the plugin; otherwise drift silently breaks update detection. See `.github/workflows/validate.yml`.
 - The upstream repo is hardcoded as `FloLess-PL/floless-skills`. If the repo ever moves, this skill needs a one-line patch.

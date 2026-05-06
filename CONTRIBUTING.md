@@ -53,6 +53,22 @@ inside Claude Code to flush the cached skill definitions. (The correct command i
 - Check `data.compiled` (not `success`) for compile results — `success: true` can coexist with `compiled: false` when there are diagnostic errors.
 - Prefer GUID-first lookup examples (`floless component <guid>`), name fallback second — names are not unique across providers.
 
+## Releasing
+
+Versions are kept in **lockstep** across every source: `plugin.json`, `marketplace.json`, and every `skills/*/SKILL.md` `metadata.version` share one value. CI (`.github/workflows/validate.yml`) fails the build on any drift.
+
+To cut a release:
+
+```bash
+bash scripts/bump-version.sh patch          # 0.9.10 -> 0.9.11
+# or:  bash scripts/bump-version.sh 0.9.12   # explicit
+bash scripts/check-version-sync.sh           # verify all sources are aligned
+git add -A && git commit -m "release: v0.9.11"
+git tag v0.9.11 && git push --follow-tags
+```
+
+The `floless-update-skills` skill relies on this convention for `MODE=copy` installs (direct skill copies), which have no `plugin.json` on disk and use the canary skill's `metadata.version` as a stand-in. Drift = silent breakage of the auto-updater.
+
 ## License
 
 All contributions are licensed under the MIT license. See [LICENSE-skills](LICENSE-skills) for the full text.
