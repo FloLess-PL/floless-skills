@@ -275,6 +275,7 @@ Note: the `floless workflow run [--wait]` and `floless workflow stop` commands, 
 - [floless-smart-nodes](../floless-smart-nodes/SKILL.md) — see the floless-smart-nodes skill
 - [floless-think-nodes](../floless-think-nodes/SKILL.md) — see the floless-think-nodes skill
 - [floless-triggers](../floless-triggers/SKILL.md) — see the floless-triggers skill
+- [floless-update-skills](../floless-update-skills/SKILL.md) — see the floless-update-skills skill
 - [floless-workflows](../floless-workflows/SKILL.md) — see the floless-workflows skill
 <!-- SKILLS_LINKS_END -->
 
