@@ -81,7 +81,7 @@ Config fields:
 | `folderPath` | folder-picker | R | — | Folder to monitor |
 | `includeSubfolders` | boolean | O | true | Recursive monitoring |
 | `fileExtensions` | string | O | — | Comma-separated without dots: `pdf,xlsx,dwg` |
-| `fileNamePattern` | string | O | `*` | Wildcard: `Report_*.pdf` |
+| `fileNamePattern` | string | O | `*` | Glob: `Report_*.pdf`, `Invoice_????_*.xlsx`. Prefix `!` to exclude (e.g., `!*.annotated.png` skips a Smart Node's own output to prevent re-fire loops). |
 | `changeTypes` | chip-select | O | ALL | ALL / CREATED / MODIFIED / DELETED / RENAMED |
 | `stabilityMode` | dropdown | O | NONE | NONE / SIZE_STABLE / MARKER_FILE / FILE_COUNT / FILE_UNLOCKED |
 | `stabilityTimeout` | number | O | 1000 | Milliseconds file must be unchanged (when stabilityMode != NONE) |

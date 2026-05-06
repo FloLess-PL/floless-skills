@@ -9,7 +9,7 @@
       "name": "floless",
       "source": "./",
       "description": "Claude Skills for FloLess workflow automation",
-      "version": "0.9.8"
+      "version": "0.9.9"
     }
   ]
 }

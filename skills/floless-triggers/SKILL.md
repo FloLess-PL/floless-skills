@@ -139,7 +139,7 @@ Required config fields:
 Key optional config fields:
 - `includeSubfolders` (boolean, default: true) — recursive monitoring
 - `fileExtensions` (string) — comma-separated without dots, e.g., `pdf,xlsx,dwg`
-- `fileNamePattern` (string) — wildcard pattern, e.g., `Report_*.pdf`
+- `fileNamePattern` (string) — glob pattern: `*` matches any chars, `?` matches one char. **Prefix with `!` to exclude matches** (e.g., `!*.annotated.png` skips files ending in `.annotated.png` — useful when a Smart Node writes outputs into the same watched folder and you want the trigger to ignore its own output to prevent re-fire loops). Examples: `Report_*.pdf`, `Invoice_????_*.xlsx`, `!*.tmp`.
 - `changeTypes` (chip-select, default: ALL) — CREATED / MODIFIED / DELETED / RENAMED
 - `stabilityMode` (dropdown, default: NONE) — NONE / SIZE_STABLE / MARKER_FILE / FILE_COUNT / FILE_UNLOCKED
 - `debounceDelay` (number, default: 500ms) — delay before triggering to batch rapid events
