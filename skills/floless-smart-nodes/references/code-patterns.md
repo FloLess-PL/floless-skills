@@ -13,6 +13,12 @@ Before running `floless compile --code <file> --json`, read the SKILL.md body fo
 
 Smart Nodes implement one of two interfaces from `FloLess.Core.Scripting.Interfaces`.
 
+> **Never declare a namespace.** FloLess compiles Smart Node source in Roslyn **script
+> mode**, which forbids namespace declarations. Adding `namespace FloLessNodes;` (or any
+> other namespace) produces the error `Cannot declare namespace in script code`. Put
+> `using` directives at the top, then the entry-point class at the top level — no
+> namespace wrapper.
+
 **Action** — performs an operation and returns output values:
 
 ```csharp
@@ -21,7 +27,6 @@ using System.Threading.Tasks;
 using FloLess.Core.Scripting.Interfaces;
 using FloLess.Core.Scripting;
 
-namespace FloLessNodes;
 
 public class MyAction : IScriptAction
 {
@@ -45,7 +50,6 @@ using System.Threading;
 using FloLess.Core.Scripting.Interfaces;
 using FloLess.Core.Scripting;
 
-namespace FloLessNodes;
 
 public class MyTrigger : IScriptTrigger
 {
@@ -80,7 +84,6 @@ using System.Threading.Tasks;
 using FloLess.Core.Scripting.Interfaces;
 using FloLess.Core.Scripting;
 
-namespace FloLessNodes;
 
 public class EchoNode : IScriptAction
 {
@@ -108,7 +111,6 @@ using System.Threading.Tasks;
 using FloLess.Core.Scripting.Interfaces;
 using FloLess.Core.Scripting;
 
-namespace FloLessNodes;
 
 public class JsonExtractNode : IScriptAction
 {
@@ -149,7 +151,6 @@ using System.Threading.Tasks;
 using FloLess.Core.Scripting.Interfaces;
 using FloLess.Core.Scripting;
 
-namespace FloLessNodes;
 
 public class HttpGetNode : IScriptAction
 {
@@ -197,7 +198,6 @@ using System.Threading.Tasks;
 using FloLess.Core.Scripting.Interfaces;
 using FloLess.Core.Scripting;
 
-namespace FloLessNodes;
 
 public class AggregateNode : IScriptAction
 {
@@ -249,7 +249,6 @@ using Tekla.Structures.Model;
 using FloLess.Core.Scripting.Interfaces;
 using FloLess.Core.Scripting;
 
-namespace FloLessNodes;
 
 public class TeklaModelInfoNode : IScriptAction
 {

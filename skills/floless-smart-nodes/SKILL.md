@@ -262,7 +262,8 @@ floless templates --type think --json
 
 Every C# Smart Node sample in this skill follows the root `CLAUDE.md` coding standards. Your Smart Node code must also follow these conventions:
 
-- **Latest C# syntax** — `LangVersion` is set to "latest" in the Roslyn compilation context. Use records, pattern matching, file-scoped namespaces, and other modern constructs freely.
+- **No `namespace` declaration** — FloLess compiles Smart Node source in Roslyn **script mode**, which forbids namespace declarations. Writing `namespace FloLessNodes;` (or any other namespace wrapper) produces `Cannot declare namespace in script code`. Put `using` directives first, then the entry-point class at the top level — no namespace.
+- **Latest C# syntax** — `LangVersion` is set to "latest" in the Roslyn compilation context. Use records, pattern matching, and other modern constructs freely. (File-scoped namespaces are off-limits because `namespace` itself is — see rule above.)
 - **`is false` instead of `!`** — write `if (result is false)` not `if (!result)`.
 - **No underscore-prefixed field names** — write `private int count;` (no leading underscore on field names).
 - **One empty line between properties** for readability.
