@@ -144,16 +144,51 @@ Place the Trigger near the **canvas centerline**, not at the origin. For the def
 All other nodes are positioned relative to this anchor: downstream nodes step Y by +200;
 parallel branches spread X by ±150 around the parent column.
 
-## Title and Description fields — set Title to the component name, never to your custom text
+## Title, Subtitle, and Description fields — three distinct things, none of them where you'd guess
 
 The Node JSON has three text fields: `Title`, `Subtitle`, and `Description`. They are NOT
-interchangeable, and AI-authored workflows commonly misuse them.
+interchangeable, and AI-authored workflows almost always misuse them. The rules below come from
+the FloLess source itself (`UI/ViewModels/NodePropertyEditorViewModel.UpdateNodeSubtitle` and
+`SmartNodeViewModel.UpdateSubtitle`).
 
 | Field | What it represents | What AI should put there in Flow A JSON |
 |---|---|---|
 | `Title` | The on-node label users read at a glance — should match the **component's catalog name** so reviewers recognize the node type instantly. | Set it to the component's `name` from `floless component <componentId> --json`. For `folder-watcher` that's `"Folder Watcher"`; for `excel-cell-changed` that's `"Excel Cell Changed"`. For `SmartNode`/`ThinkNode`/`Display`/`Condition` (no `ComponentId`), use the canonical UI label: `"Smart Node"`, `"Think Node"`, `"Display"`, `"Condition"`. |
-| `Subtitle` | Optional secondary line below the title. | Leave empty unless the user explicitly asks. |
-| `Description` | A short author-editable badge rendered above the node. | **This is where your custom annotations belong** — purpose-specific text like `"Watch input/ for .j<N>"` or `"Sentinelize"` that distinguishes this instance from the generic component. |
+| `Subtitle` | The **runtime config summary** rendered as a second line under the Title. FloLess regenerates this whenever the user opens the node's property editor or modifies a parameter — but **NOT on workflow load**. So Flow A JSON authoring without an explicit `Subtitle` shows blank until the user touches the node. Set it yourself. | For Trigger/Action nodes: comma-join the non-empty `Config` values (FloLess does the same in `UpdateNodeSubtitle`). For SmartNode: first line of `SmartNodeInstructions`, truncated at 47 chars + `"..."` if longer (mirrors `SmartNodeViewModel.UpdateSubtitle`). For ThinkNode: first line of `ThinkNodePromptTemplate` similarly. For Display/Condition: leave blank — FloLess fills in the node-type label at render time. |
+| `Description` | An author-editable badge rendered **above** the node. This is the user-facing annotation. | **This is where your custom purpose-text belongs** — `"Watch input/ for .j<N>"`, `"Sentinelize"`, `"Create HEA200 beam"`. Anything that distinguishes this instance from a generic component. |
+
+### The Subtitle gotcha
+
+FloLess does NOT regenerate `Subtitle` when a `.flo` file is loaded — only when:
+- The user opens the property editor on the node, OR
+- A parameter value changes (drag, paste, etc.)
+
+That means a Flow A `.flo` written without `Subtitle` shows the trigger node with **only the Title visible** — no path summary, no instruction preview, no second line. UI looks lobotomized. Always compute and inject `Subtitle` yourself when authoring JSON.
+
+```json
+// CORRECT — all three fields set
+{
+  "Id": "trigger-1",
+  "NodeType": "Trigger",
+  "ComponentId": "folder-watcher",
+  "Title": "Folder Watcher",                                                // catalog name
+  "Subtitle": "C:\\path\\to\\input, False, .j185, CREATED, ...",            // Config summary
+  "Description": "Watch input/ for .j<N>",                                   // purpose badge
+  "X": 900, "Y": 300,
+  "Config": { "folderPath": "C:\\path\\to\\input", "includeSubfolders": false, ... }
+}
+
+// CORRECT for SmartNode
+{
+  "Id": "smart-1",
+  "NodeType": "SmartNode",
+  "Title": "Smart Node",
+  "Subtitle": "Read the Tekla .j<N> saved attribute file at in...",         // first 47 + "..."
+  "Description": "Sentinelize",
+  "X": 900, "Y": 500,
+  "SmartNodeInstructions": "Read the Tekla .j<N> saved attribute file at inputs[\"jFilePath\"]. Replace numerics with sentinels using i*11.111111. ..."
+}
+```
 
 ### Why you must set `Title` explicitly
 
