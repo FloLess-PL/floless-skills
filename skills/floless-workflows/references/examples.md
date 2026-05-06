@@ -24,8 +24,8 @@ Demonstrates the required fields and the simplest possible topology.
       "NodeType": "Trigger",
       "Title": "Excel Cell Changed",
       "ComponentId": "excel-cell-changed",
-      "X": 100,
-      "Y": 200,
+      "X": 0,
+      "Y": 0,
       "Config": {
         "filePath": "C:\\Data\\book.xlsx",
         "sheetName": "Sheet1",
@@ -36,7 +36,7 @@ Demonstrates the required fields and the simplest possible topology.
       "Id": "node-display-1",
       "NodeType": "Display",
       "Title": "Result",
-      "X": 450,
+      "X": 0,
       "Y": 200
     }
   ],
@@ -85,8 +85,8 @@ Variable templating passes `{{trigger.cellValue}}` into the Condition expression
       "NodeType": "Trigger",
       "Title": "Excel Cell Changed",
       "ComponentId": "excel-cell-changed",
-      "X": 100,
-      "Y": 200,
+      "X": 0,
+      "Y": 0,
       "Config": {
         "filePath": "C:\\Data\\structural.xlsx",
         "sheetName": "Loads",
@@ -97,7 +97,7 @@ Variable templating passes `{{trigger.cellValue}}` into the Condition expression
       "Id": "condition-threshold",
       "NodeType": "Condition",
       "Title": "Value > 100?",
-      "X": 350,
+      "X": 0,
       "Y": 200,
       "Config": {
         "Expression": "{{trigger.cellValue}} > 100"
@@ -108,8 +108,8 @@ Variable templating passes `{{trigger.cellValue}}` into the Condition expression
       "NodeType": "Action",
       "Title": "Create Tekla Beam",
       "ComponentId": "tekla-create-beam",
-      "X": 600,
-      "Y": 100,
+      "X": -150,
+      "Y": 400,
       "Config": {
         "profile": "HEA200",
         "length": "{{trigger.cellValue}}",
@@ -121,8 +121,8 @@ Variable templating passes `{{trigger.cellValue}}` into the Condition expression
       "NodeType": "Action",
       "Title": "Log Skipped",
       "ComponentId": "log",
-      "X": 600,
-      "Y": 300,
+      "X": 150,
+      "Y": 400,
       "Config": {
         "Message": "Value {{trigger.cellValue}} below threshold — skipped"
       }
@@ -131,8 +131,8 @@ Variable templating passes `{{trigger.cellValue}}` into the Condition expression
       "Id": "display-result",
       "NodeType": "Display",
       "Title": "Result",
-      "X": 850,
-      "Y": 200
+      "X": 0,
+      "Y": 600
     }
   ],
   "Connections": [
@@ -195,8 +195,8 @@ to the next via `{{actionTitle.result}}` template syntax.
       "NodeType": "Trigger",
       "Title": "New File Detected",
       "ComponentId": "folder-watcher",
-      "X": 50,
-      "Y": 200,
+      "X": 0,
+      "Y": 0,
       "Config": {
         "folderPath": "C:\\Incoming\\Reports",
         "filePattern": "*.pdf"
@@ -207,7 +207,7 @@ to the next via `{{actionTitle.result}}` template syntax.
       "NodeType": "Action",
       "Title": "Read File",
       "ComponentId": "file-read",
-      "X": 300,
+      "X": 0,
       "Y": 200,
       "Config": {
         "filePath": "{{trigger.filePath}}"
@@ -217,8 +217,8 @@ to the next via `{{actionTitle.result}}` template syntax.
       "Id": "think-summarize",
       "NodeType": "ThinkNode",
       "Title": "Summarize",
-      "X": 550,
-      "Y": 200,
+      "X": 0,
+      "Y": 400,
       "ThinkNodePromptTemplate": "Summarize the following document in 3 bullet points:\n\n{{Read File.result}}",
       "ThinkNodeSelectedModel": "claude-sonnet-4-20250514",
       "ThinkNodeTemperature": 0.3,
@@ -229,8 +229,8 @@ to the next via `{{actionTitle.result}}` template syntax.
       "NodeType": "Action",
       "Title": "Send Email",
       "ComponentId": "email-send",
-      "X": 800,
-      "Y": 200,
+      "X": 0,
+      "Y": 600,
       "Config": {
         "to": "team@company.com",
         "subject": "New Report Summary: {{trigger.fileName}}",
@@ -241,8 +241,8 @@ to the next via `{{actionTitle.result}}` template syntax.
       "Id": "display-done",
       "NodeType": "Display",
       "Title": "Done",
-      "X": 1050,
-      "Y": 200
+      "X": 0,
+      "Y": 800
     }
   ],
   "Connections": [
