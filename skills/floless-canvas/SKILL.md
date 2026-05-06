@@ -38,11 +38,18 @@ Use this skill in these scenarios:
 
 FloLess uses a device-independent pixel coordinate system with these rules:
 
-- **Origin:** (0, 0) is the top-left of the canvas.
+- **Origin:** (0, 0) is the top-left of the canvas. **Do not place nodes there** — they end up
+  in the corner with all the empty canvas to the right and below, which looks broken.
+- **Canvas size:** the default canvas is 2000 × 1500 device-independent pixels. The viewport
+  centers around roughly (1000, 750) when a fresh workflow opens.
 - **Y axis (primary flow axis):** increases downward. Downstream nodes have higher Y values.
 - **X axis (branch axis):** increases rightward. Use X to separate parallel branches.
 - **Units:** device-independent pixels (DIPs). No scaling factor to apply.
-- **Starting position:** place the first node (always a Trigger) at x=0, y=0.
+- **Starting position:** place the first node (always a Trigger) **near the canvas centerline**,
+  not at the origin. For a typical 2000 × 1500 canvas, start the Trigger at roughly
+  `(900, 300)` — horizontally centered (X ≈ canvasWidth/2 − 100 to account for ~200px node
+  width), with Y near the upper third so the flow has room to extend downward without
+  scrolling.
 
 Canvas settings (zoom, viewport offset) are cosmetic and do not affect the stored X/Y coordinates.
 The coordinates stored in the workflow JSON are absolute canvas positions, independent of zoom level.
@@ -123,22 +130,70 @@ The Condition node has two outputs (port 0 = true, port 1 = false). Both childre
 - X matches the upstream node in the branch (keep the column straight).
 - Never place a Display node in the middle of a flow — it is a terminal node with no output ports.
 
-### Starting origin
+### Starting position — do not place at (0, 0)
 
-Always start with the Trigger node at x=0, y=0. All other nodes are positioned relative to this
-anchor using the stepping rules above. Downstream nodes go below; parallel branches spread sideways.
+Place the Trigger near the **canvas centerline**, not at the origin. For the default
+2000 × 1500 canvas, start the Trigger at approximately `(900, 300)`:
+
+- `X = 900` ≈ `canvasWidth/2 − nodeWidth/2` (≈ 1000 − 100). The trigger sits horizontally
+  centered, with the rest of the flow stacking below in a clean column.
+- `Y = 300` is near the upper third of the canvas. A linear flow can extend downward by
+  multiples of 200px (`y = 300, 500, 700, 900, …`) without spilling off-canvas — the canvas
+  comfortably accommodates 6+ vertically-stacked nodes from this anchor.
+
+All other nodes are positioned relative to this anchor: downstream nodes step Y by +200;
+parallel branches spread X by ±150 around the parent column.
+
+## Title and Description fields — do not override Title
+
+The Node JSON has three text fields: `Title`, `Subtitle`, and `Description`. They are NOT
+interchangeable, and AI-authored workflows commonly misuse them.
+
+| Field | Owned by | Purpose | When AI should set it |
+|---|---|---|---|
+| `Title` | The component | Display title shown on the node, defaulted from the component definition (e.g. "Folder Watcher", "Send Email"). | **Never override.** Omit the field entirely — FloLess fills it from the `NodeTypeRegistry` default for the chosen `ComponentId`. Overriding produces a node whose label no longer matches its component, confusing reviewers and breaking visual recognition. |
+| `Subtitle` | The component (rare) | Optional secondary line below the title. | **Never override** unless the user explicitly asks. |
+| `Description` | The user / author | A short user-editable badge rendered above the node. This is the field for "what this instance does in this workflow". | **This is where AI annotations belong.** Use it for purpose-specific text like `"Watch input/ for .j<N>"` or `"Sentinelize"` — anything that distinguishes this instance from a generic component. |
+
+```json
+// CORRECT
+{
+  "Id": "trigger-1",
+  "NodeType": "Trigger",
+  "ComponentId": "folder-watcher",
+  "Description": "Watch input/ for new .j<N> files",
+  "X": 900, "Y": 300,
+  "Config": { ... }
+}
+
+// WRONG — Title overridden, no Description
+{
+  "Id": "trigger-1",
+  "NodeType": "Trigger",
+  "ComponentId": "folder-watcher",
+  "Title": "Watch input/ for new .j<N> files",   // ← never do this
+  "X": 900, "Y": 300,
+  "Config": { ... }
+}
+```
+
+Same rule applies to `floless workflow add-node`: do **not** pass `--title`. The CLI's own
+help describes it as "Optional node title (defaults to NodeTypeRegistry default)" — that
+default is what the user expects to see. If you need to convey what this instance does,
+include it in the workflow's overall design or in `Description` (set in a follow-up
+`update-node` if/when the CLI exposes that, or directly in the JSON for Flow A authoring).
 
 ## Worked example
 
 A 5-node workflow: Trigger → Action → Condition → Display (true) + Display (false).
 
-| Node        | Type      | x    | y   | Notes                                         |
-|-------------|-----------|------|-----|-----------------------------------------------|
-| Trigger     | Trigger   | 0    | 0   | Start at origin                               |
-| Action      | Action    | 0    | 200 | 200px below Trigger                           |
-| Condition   | Condition | 0    | 400 | 200px below Action                            |
-| Display-T   | Display   | -150 | 600 | True branch: offset 150px left, 200px below   |
-| Display-F   | Display   | 150  | 600 | False branch: offset 150px right, 200px below |
+| Node        | Type      | x    | y   | Notes                                                    |
+|-------------|-----------|------|-----|----------------------------------------------------------|
+| Trigger     | Trigger   | 900  | 300 | Anchor near canvas centerline                            |
+| Action      | Action    | 900  | 500 | 200px below Trigger                                      |
+| Condition   | Condition | 900  | 700 | 200px below Action                                       |
+| Display-T   | Display   | 750  | 900 | True branch: 150px left of parent column, 200px below    |
+| Display-F   | Display   | 1050 | 900 | False branch: 150px right of parent column, 200px below  |
 
 Connections:
 - Trigger(out:0) → Action(in:0)
@@ -152,30 +207,45 @@ This produces a clean top-to-bottom layout with clear branch separation at the C
 
 Avoid these anti-patterns that AI agents commonly produce:
 
-**1. All nodes at (0,0)**
+**1. Anchoring at (0, 0)**
+Placing the Trigger at the canvas origin parks the whole flow in the top-left corner with all
+the empty canvas to the right and below. The user opens the workflow and sees a node squashed
+against the chrome. Fix: anchor the Trigger near the centerline, around `(900, 300)` for a
+2000 × 1500 canvas, and step downward from there.
+
+**2. All nodes at (0, 0)**
 Nodes overlap completely and the canvas shows a single unreadable stack. Fix: apply the 200px
-vertical stepping rule starting from the Trigger at (0,0).
+vertical stepping rule starting from the centered Trigger anchor.
 
-**2. Left-to-right flow**
-Increasing X values along the linear data path (x=0, x=200, x=400) produces a flow that reads
-sideways. FloLess canvases are designed for top-to-bottom reading; horizontal flows contradict
-the canonical direction. Fix: increase Y (not X) as the flow progresses downstream.
+**3. Left-to-right flow**
+Increasing X values along the linear data path (x=900, x=1100, x=1300) produces a flow that
+reads sideways. FloLess canvases are designed for top-to-bottom reading; horizontal flows
+contradict the canonical direction. Fix: increase Y (not X) as the flow progresses downstream.
 
-**3. Inconsistent spacing**
-Mixing 50px, 300px, and 200px vertical gaps makes the layout look chaotic. Fix: use exactly 200px
-vertical for linear flow and 300px horizontal between parallel branches.
+**4. Inconsistent spacing**
+Mixing 50px, 300px, and 200px vertical gaps makes the layout look chaotic. Fix: use exactly
+200px vertical for linear flow and 300px horizontal between parallel branches.
 
-**4. Display terminator in the middle**
-Placing a Display node at y=200 with an Action at y=400 is structurally invalid — Display has
+**5. Display terminator in the middle**
+Placing a Display node at y=500 with an Action at y=700 is structurally invalid — Display has
 no output ports. Fix: always place Display at the bottommost Y of the branch.
 
-**5. Condition branches at the same X**
-Both true and false branches at x=0 overlap. Fix: offset the false branch 150px right of the
-true branch (or spread them ±150px around the parent X).
+**6. Condition branches at the same X**
+Both true and false branches at the parent X overlap. Fix: spread them ±150px around the
+parent column.
 
-**6. Missing port indexes in connection JSON**
-Omitting `SourcePortIndex` or `TargetPortIndex` fields causes the connection to fail. Fix: always
-include both port index fields, defaulting to 0 when there is only one port.
+**7. Overriding `Title` with custom text**
+AI agents commonly try to label what a node does by setting `Title` to something descriptive
+like `"Watch output/ for *.png"`. This breaks the visual contract — the on-node label should
+match the component's default name (`Folder Watcher`, `Send Email`) so reviewers can recognize
+node types at a glance. Fix: omit `Title` entirely (let the `NodeTypeRegistry` default fill
+in), and put your custom text in `Description` instead. See the
+[Title and Description section](#title-and-description-fields--do-not-override-title) for
+the exact field semantics.
+
+**8. Missing port indexes in connection JSON**
+Omitting `SourcePortIndex` or `TargetPortIndex` fields causes the connection to fail. Fix:
+always include both port index fields, defaulting to 0 when there is only one port.
 
 ## Progressive disclosure
 

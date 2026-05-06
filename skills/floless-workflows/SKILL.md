@@ -351,18 +351,18 @@ Goal: create a workflow that watches for Excel cell changes and logs the value.
     {
       "Id": "trigger-1",
       "NodeType": "Trigger",
-      "Title": "Excel Cell Changed",
       "ComponentId": "excel-cell-changed",
-      "X": 0,
-      "Y": 0
+      "Description": "Watch the loads cell for changes",
+      "X": 900,
+      "Y": 300
     },
     {
       "Id": "action-1",
       "NodeType": "Action",
-      "Title": "Log Value",
       "ComponentId": "log",
-      "X": 0,
-      "Y": 200,
+      "Description": "Echo cell value to log",
+      "X": 900,
+      "Y": 500,
       "Arguments": {
         "Message": "Cell changed: {{trigger.cellValue}}"
       }
@@ -370,9 +370,9 @@ Goal: create a workflow that watches for Excel cell changes and logs the value.
     {
       "Id": "display-1",
       "NodeType": "Display",
-      "Title": "Result",
-      "X": 0,
-      "Y": 400
+      "Description": "Final value badge",
+      "X": 900,
+      "Y": 700
     }
   ],
   "Connections": [
