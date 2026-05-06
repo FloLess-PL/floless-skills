@@ -116,16 +116,62 @@ Cannot be cleared with empty string. Omit `--response-format` to leave unchanged
 
 ### OutputSchemaJson (optional)
 
-A JSON Schema (draft-07) describing the expected LLM output structure. Only meaningful when `ResponseFormat=json`. Pass `""` to clear.
+> **NOT JSON Schema (draft-07).** This is a JSON-encoded
+> `List<FloLess.Core.Models.SmartNode.OutputFieldSchema>` — the same
+> structure used by Smart Nodes. Earlier versions of this skill described
+> it as JSON Schema; that was wrong. FloLess deserializes case-sensitively
+> with PascalCase property names: `Name`, `Type`, `Description`.
 
-Example:
+Each entry describes one named field the LLM is expected to return. Only meaningful
+when `ResponseFormat=json`. Pass `""` to clear.
+
 ```json
-{"type":"object","properties":{"summary":{"type":"string"},"key_points":{"type":"array","items":{"type":"string"}}},"required":["summary","key_points"]}
+[
+  {"Name":"summary",   "Type":"string", "Description":"One-line summary of the report"},
+  {"Name":"keyDates",  "Type":"string", "Description":"Key dates mentioned in the report"},
+  {"Name":"sentiment", "Type":"string", "Description":"Overall sentiment: positive, neutral, or negative"}
+]
 ```
+
+Wrong (won't deserialize — keys ignored, fields default to empty):
+```json
+{"type":"object","properties":{"summary":{"type":"string"}}}     // JSON Schema syntax — not used
+[{"name":"summary","type":"string"}]                              // lowercase keys — silently broken
+```
+
+Supported `Type` values: `"string"`, `"number"`, `"boolean"`. (No `"FloImage"` here — outputs are LLM text, not arbitrary objects.)
 
 ### InputSchemaJson (optional)
 
-A JSON Schema validated against the upstream data before the LLM call. If validation fails, the node errors with `input_schema_violation` before calling the LLM — saving tokens. Pass `""` to clear.
+> Same model — JSON-encoded `List<FloLess.Core.Models.SmartNode.InputFieldSchema>`,
+> PascalCase keys, NOT JSON Schema. Used to declare which inputs this Think
+> Node consumes from upstream nodes.
+
+The full property set on each entry: `Name`, `Label`, `Type`, `Required`,
+`Description`, `DefaultValue`, `Options` (for `dropdown`), `Value`. Pass `""` to clear.
+
+```json
+[
+  {"Name":"document",  "Label":"Document Text", "Type":"string",  "Required":true,
+   "Description":"The PDF / report text to summarize"},
+  {"Name":"maxBullets","Label":"Max Bullets",   "Type":"number",  "Required":false,
+   "DefaultValue":"3"}
+]
+```
+
+> **Critical name-matching rule (same as Smart Nodes).** The `Name` field must
+> match the upstream node's output-field name. FloLess does NOT rename across
+> connections — it merges every upstream output into the Think Node's input
+> dictionary by name. If you declare `Name: "documentText"` but the upstream
+> File-Read action emits `content`, the schema entry stays empty at runtime.
+>
+> Discover upstream output names with:
+> - Triggers/Actions: `floless component <componentId> --json` → `outputs[].name`
+> - SmartNode/ThinkNode: `floless workflow node-context --workflow current --node {id} --json` → `outputSchema`
+>
+> If you need a friendlier prompt variable name, alias it INSIDE the prompt template (`{{document.text}}` etc.) — not in the schema.
+
+If the upstream value is missing or fails type validation, the node errors with `input_schema_violation` before the LLM call — saving tokens.
 
 ### IsCachingEnabled (optional)
 
