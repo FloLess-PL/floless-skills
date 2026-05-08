@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires git and curl on PATH. Works on any platform; install layout detection covers Claude Code, Codex CLI, and OpenCode.
 metadata:
   author: FloLess
-  version: "0.9.14"
+  version: "0.9.15"
   upstream-repo: "FloLess-PL/floless-skills"
 allowed-tools: Bash Read Write AskUserQuestion
 ---

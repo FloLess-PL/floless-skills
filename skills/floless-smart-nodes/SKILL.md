@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires FloLess desktop app running and floless CLI installed. Windows only.
 metadata:
   author: FloLess
-  version: "0.9.14"
+  version: "0.9.15"
   cli-version-min: "1.0.0"
 allowed-tools: Bash(floless:*) Read Write
 ---
@@ -306,6 +306,29 @@ floless compile --code fix.cs --workflow current --node {nodeId} --json
 ```
 
 When `--workflow` and `--node` are both provided, the response includes `"nodeUpdated": true` on success, meaning the loaded workflow in the desktop has been updated in-place. No manual reload is needed.
+
+> **CRITICAL — after editing a `.flo` on disk while FloLess has it loaded, the editor's
+> "Error" badge and `data.diagnostics[]` cache do NOT auto-refresh.** The stored
+> compile state in the loaded workflow is the result of FloLess's *last* compile of
+> *that node's source as it was when the .flo was first loaded*. Saving new source
+> bytes to the file via Python/text-edit does not invalidate the cache — the editor
+> keeps showing the stale Error badge until either (a) the user clicks **Recompile**
+> in the Smart Node editor, (b) the user closes the file and re-opens it, or (c)
+> a fresh `floless compile --workflow current --node {nodeId}` runs against the loaded
+> node.
+>
+> **Always run option (c) for every Smart Node after editing the `.flo` on disk:**
+>
+> ```bash
+> for nid in $(floless workflow nodes --workflow current --json | jq -r '.data[] | select(.hasCode) | .id'); do
+>   floless compile --code "<path-to-its-source>.cs" --workflow current --node "$nid" --json | jq '.data | {compiled, nodeUpdated}'
+> done
+> ```
+>
+> A standalone `floless compile --code <file>` is necessary but NOT sufficient —
+> it confirms the source compiles, but does NOT push the result into the loaded
+> workflow's compile-state cache. The Error badge stays. Run the workflow-bound
+> form (`--workflow current --node {id}`) to actually clear it.
 
 ---
 

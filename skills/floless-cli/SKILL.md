@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires FloLess desktop app running and floless CLI installed. Windows only.
 metadata:
   author: FloLess
-  version: "0.9.14"
+  version: "0.9.15"
   cli-version-min: "1.0.0"
 allowed-tools: Bash(floless:*) Read Write
 ---
