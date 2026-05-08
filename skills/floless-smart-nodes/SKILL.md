@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires FloLess desktop app running and floless CLI installed. Windows only.
 metadata:
   author: FloLess
-  version: "0.9.12"
+  version: "0.9.13"
   cli-version-min: "1.0.0"
 allowed-tools: Bash(floless:*) Read Write
 ---
@@ -312,6 +312,49 @@ When `--workflow` and `--node` are both provided, the response includes `"nodeUp
 ## Target framework selection
 
 The `--target-framework` option controls which .NET runtime the compiled assembly targets.
+
+### CLI value vs `.flo` stored value (don't confuse these)
+
+These are two separate vocabularies for the same concept:
+
+| Layer | .NET Core / in-process | .NET Framework 4.8 / Tekla |
+|---|---|---|
+| `floless compile --target-framework` CLI flag | `net8.0` (default) | `net48` |
+| `.flo` JSON `SmartNodeTargetFramework` field | `"NetCore"` | `"NetFramework48"` |
+| FloLess editor dropdown DisplayName | `.NET (in-process)` | `.NET Framework (Tekla)` |
+| Schema/JSON-schema description text | `.NET Core` | `.NET Framework 4.8` |
+
+The schema description and the dropdown DisplayName are human-readable; **the stored
+enum in `.flo` JSON is `NetCore` or `NetFramework48`** — no dot, no space. Writing
+`".NET Framework 4.8"` (the description string) into `SmartNodeTargetFramework`
+deserializes silently to the default `NetCore`, and the editor opens the node with
+the wrong framework selected, which produces compile errors like
+`'Tekla' could not be found` even though the node was authored as Tekla.
+
+Same rule for `SmartNodeSoftwareVersion`: write `"tekla-2025"` (when paired with
+`NetFramework48`) or `"none"` / empty string (when paired with `NetCore`).
+
+```json
+// CORRECT — Tekla Smart Node
+{
+  "SmartNodeTargetFramework": "NetFramework48",
+  "SmartNodeSoftwareVersion":  "tekla-2025"
+}
+
+// CORRECT — non-Tekla Smart Node
+{
+  "SmartNodeTargetFramework": "NetCore",
+  "SmartNodeSoftwareVersion":  "none"
+}
+
+// WRONG — schema description strings; deserialize to NetCore default
+{
+  "SmartNodeTargetFramework": ".NET Framework 4.8",
+  "SmartNodeSoftwareVersion":  "tekla-2025"
+}
+```
+
+
 
 ### `net8.0` (default)
 
