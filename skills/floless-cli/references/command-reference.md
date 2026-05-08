@@ -1,6 +1,6 @@
 # floless CLI command reference
 
-Exhaustive reference for all 27 shipping commands as of FloLess CLI v1.0.0.
+Exhaustive reference for all 28 shipping commands as of FloLess CLI v1.0.0.
 All examples use `--json`. All commands return envelope `{success, data, count?, error?, errorCode?, errorWrapper?}`.
 Exit codes: 0 = success, 1 = failure.
 
@@ -13,7 +13,7 @@ Exit codes: 0 = success, 1 = failure.
 
 Top-level: [nodes](#floless-nodes) · [triggers](#floless-triggers) · [actions](#floless-actions) · [component](#floless-component) · [skills](#floless-skills) · [templates](#floless-templates) · [schema](#floless-schema) · [compile](#floless-compile) · [start](#floless-start) · [close](#floless-close)
 
-Workflow: [create](#floless-workflow-create) · [validate](#floless-workflow-validate) · [info](#floless-workflow-info) · [list](#floless-workflow-list) · [nodes](#floless-workflow-nodes) · [node-context](#floless-workflow-node-context) · [add-node](#floless-workflow-add-node) · [delete-node](#floless-workflow-delete-node) · [connect](#floless-workflow-connect) · [disconnect](#floless-workflow-disconnect) · [update-think-node](#floless-workflow-update-think-node) · [export](#floless-workflow-export) · [open](#floless-workflow-open) · [save](#floless-workflow-save) · [save-as](#floless-workflow-save-as) · [run](#floless-workflow-run) · [stop](#floless-workflow-stop)
+Workflow: [create](#floless-workflow-create) · [validate](#floless-workflow-validate) · [info](#floless-workflow-info) · [list](#floless-workflow-list) · [nodes](#floless-workflow-nodes) · [node-context](#floless-workflow-node-context) · [add-node](#floless-workflow-add-node) · [delete-node](#floless-workflow-delete-node) · [connect](#floless-workflow-connect) · [disconnect](#floless-workflow-disconnect) · [update-think-node](#floless-workflow-update-think-node) · [update-smart-node](#floless-workflow-update-smart-node) · [export](#floless-workflow-export) · [open](#floless-workflow-open) · [save](#floless-workflow-save) · [save-as](#floless-workflow-save-as) · [run](#floless-workflow-run) · [stop](#floless-workflow-stop)
 
 ---
 
@@ -422,6 +422,54 @@ floless workflow update-think-node --workflow current --node node-think-1 \
 ```
 
 Output: `{ "success": true, "data": { "nodeId": "node-think-1", "updated": true } }`
+
+---
+
+### `floless workflow update-smart-node`
+
+**Source:** `WorkflowCommand.cs` | **Purpose:** Update a Smart Node's persistent configuration in the loaded workflow. Sets the framework, software-version, explanation, schemas, and display fields that `add-node` does not set, without patching the `.flo` file by hand. Stripe-style PATCH semantics with **atomic-mutation guarantee** — if any field fails validation, no field is mutated.
+
+Options:
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `--workflow <id>` | Yes | `current` for active workflow |
+| `--node <id>` | Yes | Smart Node ID to update |
+| `--instructions <text>` | No | Natural-language instructions describing what code to generate. `""` is sent verbatim (sets to empty string). `"-"` reads stdin; `"@path"` reads file |
+| `--target-framework <fw>` | No | `NetCore` (default for new nodes), `NetFramework48` (Tekla code), or aliases `net8.0` / `net48`. Case-insensitive |
+| `--software-version <ver>` | No | `tekla-2025` (Tekla code) or `none` (standalone). `""` is sent verbatim |
+| `--explanation <text>` | No | Plain-English description shown in the editor's "Explanation & Notes" pane. `""` is sent verbatim. `"-"` reads stdin; `"@path"` reads file |
+| `--title <text>` | No | Canvas-visible node header (binds to `Title` in `NodeTemplates.xaml`). User-facing name |
+| `--subtitle <text>` | No | One-line under the title. `""` is sent verbatim |
+| `--description <text>` | No | Optional secondary descriptor rendered as a small badge separate from the canvas header. `""` is sent verbatim |
+| `--input-schema-json <json>` | No | Input schema as a JSON array (PascalCase keys: `Name`, `Label`, `Type`, `Required`, `Description`, `DefaultValue`, `Options`, `Value`). `""` clears |
+| `--output-schema-json <json>` | No | Output schema as a JSON array (PascalCase keys: `Name`, `Type`, `Description`). `""` clears |
+| `--json` | No | Output raw JSON response |
+
+`--instructions` and `--explanation` cannot both read from stdin (`"-"`) in the same invocation — the second consumer would see EOF. The CLI rejects this configuration up front with a clear error.
+
+```bash
+# Typical end-to-end SmartNode setup (replaces the on-disk .flo patch workaround):
+NODE_ID=$(floless workflow add-node --workflow current --type SmartNode --title "Save Attributes" --json | jq -r '.data.nodeId')
+
+floless workflow update-smart-node --workflow current --node "$NODE_ID" \
+  --target-framework net48 --software-version tekla-2025 \
+  --explanation "Opens the Tekla connection dialog and saves current values." \
+  --input-schema-json '[{"Name":"connectionId","Type":"string","Required":true,"Label":"","Description":"e.g. 146","DefaultValue":null,"Options":null,"Value":null}]' \
+  --output-schema-json '[{"Name":"filePath","Type":"string","Description":"path to saved .j file"}]' \
+  --json
+
+floless compile --workflow current --node "$NODE_ID" --code save.cs \
+  --target-framework net48 --software-version tekla-2025 --json
+```
+
+Output: `{ "success": true, "data": { "updated": true, "fields": ["targetFramework","softwareVersion","explanation","inputSchema","outputSchema"], "count": 5 } }`
+
+**Validation errors return 400 with `errorCode`:**
+- `bad_request_invalid_field_value` — `targetFramework` not in `Enum.GetNames(typeof(CompilationFramework))`, or any field has the wrong JSON kind (e.g. `"instructions": 42`).
+- `bad_request_invalid_json` — body is not a JSON object, or `inputSchema`/`outputSchema` array is not deserializable to the schema model.
+- `bad_request_no_fields` — body has zero updatable fields.
+- 404 `not_found_node` — node ID doesn't exist or is a different node type (use `update-think-node` for ThinkNodes).
 
 ---
 

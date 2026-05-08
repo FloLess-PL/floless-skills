@@ -1,11 +1,11 @@
 ---
 name: floless-cli
-description: Connect to and drive the FloLess CLI from any AI terminal. Use when connecting to the FloLess desktop app, parsing the response envelope, handling CLI errors, recovering from port-file failures, or understanding exit codes. Covers port-file discovery at %LocalAppData%/FloLess/cli-api.port, the Stripe-style envelope shape, desktop lifecycle (floless start / floless close), and the full reference for all 27 shipping commands. Windows only.
+description: Connect to and drive the FloLess CLI from any AI terminal. Use when connecting to the FloLess desktop app, parsing the response envelope, handling CLI errors, recovering from port-file failures, or understanding exit codes. Covers port-file discovery at %LocalAppData%/FloLess/cli-api.port, the Stripe-style envelope shape, desktop lifecycle (floless start / floless close), and the full reference for all 28 shipping commands. Windows only.
 license: MIT
 compatibility: Requires FloLess desktop app running and floless CLI installed. Windows only.
 metadata:
   author: FloLess
-  version: "0.9.16"
+  version: "0.9.17"
   cli-version-min: "1.0.0"
 allowed-tools: Bash(floless:*) Read Write
 ---
@@ -34,7 +34,7 @@ desktop via `floless` commands.
   (`errorCode` vs `error` vs `errorWrapper.message`).
 - **Handling CLI errors** — exit code 1, `success: false`, or no port file found.
 - **Recovering from port-file failures** — the port file is missing, corrupt, or the PID is dead.
-- **Understanding the 27 shipping commands** — you need the exact option names for any command.
+- **Understanding the 28 shipping commands** — you need the exact option names for any command.
 
 ## Prerequisites
 
@@ -357,7 +357,7 @@ floless workflow create --output out.flo --json   # blocks
 
 ## Full command reference
 
-The exhaustive reference for all 27 shipping commands — including exact option names, sample
+The exhaustive reference for all 28 shipping commands — including exact option names, sample
 output envelopes, and source line references — is in:
 
 `references/command-reference.md`
