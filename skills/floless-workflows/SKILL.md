@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires FloLess desktop app running and floless CLI installed. Windows only.
 metadata:
   author: FloLess
-  version: "0.9.13"
+  version: "0.9.14"
   cli-version-min: "1.0.0"
 allowed-tools: Bash(floless:*) Read Write
 ---
@@ -92,6 +92,36 @@ Hand-construct the JSON according to the schema. Key rules:
 - All node `Id` values must be non-empty and unique (GUIDs recommended)
 - All `NodeType` values must be valid (server enforces via `NodeTypeRegistry`)
 - Connections reference existing node IDs; no cycles allowed
+
+> **CRITICAL — schema description text is NOT the enum value.** Several enum-typed string
+> fields in `floless schema --type workflow` show example values inside the `description`
+> text (e.g. `"Compilation target: '.NET Core' or '.NET Framework 4.8'"`). Those quoted
+> strings are human-readable documentation, **not** the values FloLess actually deserializes.
+> The stored enum is the C# member name without spaces or dots — `NetCore` /
+> `NetFramework48` — and writing the description string deserializes silently to the
+> default, producing runtime errors that look like missing references.
+>
+> Affected fields and their actual enum values:
+>
+> | Field | Stored values |
+> |---|---|
+> | `SmartNodeTargetFramework` | `"NetCore"`, `"NetFramework48"` |
+> | `SmartNodeGenerationState` | `"NotGenerated"`, `"Generating"`, `"Ready"`, `"Stale"`, `"Error"`, `"Modified"` |
+> | `SmartNodeSoftwareVersion` | `"none"` (NetCore), `"tekla-2025"` (NetFramework48), or other version-id strings |
+>
+> **How to discover the right value when the schema description is ambiguous:**
+> 1. Check an existing `.flo` template:
+>    `grep -r SmartNodeTargetFramework src/FloLess/Templates/*.flo` (in the floless-app repo)
+>    or in any working workflow on disk.
+> 2. Read the C# enum directly:
+>    `src/FloLess/Core/Models/SmartNode/<EnumName>.cs` lists every member name.
+> 3. Open a working node in the FloLess editor, save, then inspect the `.flo` to see what
+>    value FloLess writes for the dropdown selection.
+>
+> The dropdown DisplayName shown in the FloLess editor is yet another vocabulary
+> (`.NET (in-process)` / `.NET Framework (Tekla)`) and is also distinct from the stored
+> enum. See `floless-smart-nodes` → "CLI value vs `.flo` stored value" for the full
+> 4-vocabulary mapping table.
 
 Minimal valid example — see [references/examples.md](references/examples.md#example-1-minimal--trigger--display).
 

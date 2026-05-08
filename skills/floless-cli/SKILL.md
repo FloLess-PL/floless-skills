@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires FloLess desktop app running and floless CLI installed. Windows only.
 metadata:
   author: FloLess
-  version: "0.9.13"
+  version: "0.9.14"
   cli-version-min: "1.0.0"
 allowed-tools: Bash(floless:*) Read Write
 ---
@@ -123,6 +123,14 @@ Stripe-style API envelope to stdout.
 
 The single exception is `floless schema`, which always outputs JSON regardless of the `--json`
 flag (it has no human-readable alternative).
+
+> **Note on `floless schema` enum fields:** the schema's `description` text often shows example
+> values like `"'.NET Core' or '.NET Framework 4.8'"` — **those quoted strings are human
+> documentation, NOT the literal values FloLess deserializes**. The actual enum names (e.g.
+> `"NetCore"`, `"NetFramework48"`) are NOT exposed in the schema output. When authoring `.flo`
+> JSON, verify the stored enum name by inspecting an existing template (`grep -r FieldName *.flo`)
+> or the C# source — see `floless-workflows` → "schema description text is NOT the enum value"
+> for the full list of affected fields and discovery steps.
 
 ```bash
 # Correct — AI terminal usage
