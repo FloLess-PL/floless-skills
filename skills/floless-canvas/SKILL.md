@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires FloLess desktop app running and floless CLI installed. Windows only.
 metadata:
   author: FloLess
-  version: "0.9.11"
+  version: "0.9.12"
   cli-version-min: "1.0.0"
 allowed-tools: Bash(floless:*) Read
 ---
@@ -144,18 +144,20 @@ Place the Trigger near the **canvas centerline**, not at the origin. For the def
 All other nodes are positioned relative to this anchor: downstream nodes step Y by +200;
 parallel branches spread X by ±150 around the parent column.
 
-## Title, Subtitle, and Description fields — three distinct things, none of them where you'd guess
+## Title, Subtitle, Description, and Explanation — four distinct things, none of them where you'd guess
 
-The Node JSON has three text fields: `Title`, `Subtitle`, and `Description`. They are NOT
-interchangeable, and AI-authored workflows almost always misuse them. The rules below come from
-the FloLess source itself (`UI/ViewModels/NodePropertyEditorViewModel.UpdateNodeSubtitle` and
-`SmartNodeViewModel.UpdateSubtitle`).
+The Node JSON has four user-facing text fields: `Title`, `Subtitle`, `Description`, and (for
+SmartNode/ThinkNode only) `SmartNodeExplanation` / `ThinkNodeExplanation`. They are NOT
+interchangeable, and AI-authored workflows almost always misuse them or skip them. The rules
+below come from the FloLess source itself (`UI/ViewModels/NodePropertyEditorViewModel.UpdateNodeSubtitle`
+and `SmartNodeViewModel.UpdateSubtitle`).
 
 | Field | What it represents | What AI should put there in Flow A JSON |
 |---|---|---|
 | `Title` | The on-node label users read at a glance — should match the **component's catalog name** so reviewers recognize the node type instantly. | Set it to the component's `name` from `floless component <componentId> --json`. For `folder-watcher` that's `"Folder Watcher"`; for `excel-cell-changed` that's `"Excel Cell Changed"`. For `SmartNode`/`ThinkNode`/`Display`/`Condition` (no `ComponentId`), use the canonical UI label: `"Smart Node"`, `"Think Node"`, `"Display"`, `"Condition"`. |
 | `Subtitle` | The **runtime config summary** rendered as a second line under the Title. FloLess regenerates this whenever the user opens the node's property editor or modifies a parameter — but **NOT on workflow load**. So Flow A JSON authoring without an explicit `Subtitle` shows blank until the user touches the node. Set it yourself. | For Trigger/Action nodes: comma-join the non-empty `Config` values (FloLess does the same in `UpdateNodeSubtitle`). For SmartNode: first line of `SmartNodeInstructions`, truncated at 47 chars + `"..."` if longer (mirrors `SmartNodeViewModel.UpdateSubtitle`). For ThinkNode: first line of `ThinkNodePromptTemplate` similarly. For Display/Condition: leave blank — FloLess fills in the node-type label at render time. |
-| `Description` | An author-editable badge rendered **above** the node. This is the user-facing annotation. | **This is where your custom purpose-text belongs** — `"Watch input/ for .j<N>"`, `"Sentinelize"`, `"Create HEA200 beam"`. Anything that distinguishes this instance from a generic component. |
+| `Description` | An author-editable badge rendered **above** the node. This is the short user-facing annotation. | **Your custom one-line label** — `"Watch input/ for .j<N>"`, `"Sentinelize"`, `"Open Connection Dialog"`. Anything that distinguishes this instance from a generic component. Keep it short — it's a badge, not a description. |
+| `SmartNodeExplanation` (SmartNode) / `ThinkNodeExplanation` (ThinkNode) | The **plain-English description** populating the "Explanation & Notes" panel inside the editor. This is what reviewers read to understand what the node does without opening the C# / prompt source. | **Three short paragraphs**: (1) what question this node answers, (2) inputs/outputs in concrete terms, (3) mechanism in one sentence. No jargon — audience is the workflow user, not the code author. Leave it blank and the editor panel shows nothing. See `floless-smart-nodes` for the full required-content shape and example. |
 
 ### The Subtitle gotcha
 
@@ -307,6 +309,16 @@ for the worked example.
 **8. Missing port indexes in connection JSON**
 Omitting `SourcePortIndex` or `TargetPortIndex` fields causes the connection to fail. Fix:
 always include both port index fields, defaulting to 0 when there is only one port.
+
+**9. Blank `SmartNodeExplanation` / `ThinkNodeExplanation`**
+The editor's "Explanation & Notes" panel reads this field. AI-authored Smart/Think Nodes
+ship with it blank by default — neither the AI code-generation pipeline nor `workflow create`
+populates it automatically. Reviewers open the node, see an empty panel, and have to read the
+C# / prompt source to understand what it does. Fix: write three plain-English paragraphs (what
+question it answers, inputs/outputs, mechanism) immediately after `floless compile` reports
+`data.compiled: true`. See the full content shape in the
+[Title/Subtitle/Description/Explanation table above](#title-subtitle-description-and-explanation--four-distinct-things-none-of-them-where-youd-guess)
+or `floless-smart-nodes` for the dedicated section.
 
 ## Progressive disclosure
 

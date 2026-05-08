@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires FloLess desktop app running and floless CLI installed. Windows only.
 metadata:
   author: FloLess
-  version: "0.9.11"
+  version: "0.9.12"
   cli-version-min: "1.0.0"
 allowed-tools: Bash(floless:*) Read Write
 ---
@@ -105,6 +105,57 @@ if (inputs.TryGetValue("filePath", out var raw) is false) return Error("...");
 var jFilePath = raw.ToString();   // local alias, not an input key
 ```
 
+## CRITICAL: every Smart Node needs a plain-English `SmartNodeExplanation`
+
+The `.flo` JSON field `SmartNodeExplanation` populates the **"Explanation & Notes"** panel
+shown in the Smart Node editor (left side, below the Instructions box). Workflow reviewers
+read it to understand what a node does without opening the C# source. **Leave it blank and
+your workflow is unusable for anyone but the author.**
+
+This field is NOT generated automatically — neither by the AI code-generation pipeline nor
+by `floless workflow create`. Static JSON authoring (Flow A) and AI-assisted authoring both
+ship with `SmartNodeExplanation: ""` unless you write it yourself. The Title/Subtitle/Description
+fields documented in `floless-canvas` are catalog/config metadata; this is the only field that
+explains *what the code does in plain language*.
+
+### Required content shape
+
+Three short paragraphs, plain English, no jargon:
+
+1. **What question this node answers** — the user-facing purpose (e.g. "Answers: 'I clicked at
+   (x,y) on a connection dialog screenshot — what variable is that?'").
+2. **Inputs and outputs** — what flows in, what flows out, in concrete terms.
+3. **Mechanism in one sentence** — how the code does it, at a level a non-coder grasps.
+
+### Example
+
+```json
+// CORRECT — populated SmartNodeExplanation
+{
+  "Description": "Lookup Field At Point",
+  "SmartNodeExplanation": "Answers the question: 'I clicked at (x, y) on a connection dialog screenshot — what variable is that?'\n\nInputs: the connection id (e.g. 146) and the click coordinate (x, y) in the dialog's own coordinate space — same coordinates that coordinates.json uses, so they line up cleanly with screenshots.\n\nOutput: the attribute name (e.g. 'tj1'), its full namespaced form (joint_attributes.tj1), the original .j-file value, and the visible text it matched. If the click didn't land in any field's rectangle, returns found=false."
+}
+
+// WRONG — blank Explanation: editor panel shows nothing, reviewers have to read the C# source
+{
+  "Description": "Lookup Field At Point",
+  "SmartNodeExplanation": ""
+}
+```
+
+### Make it part of the compile-fix loop
+
+After every successful compile (`data.compiled: true`), confirm `SmartNodeExplanation` is
+populated and meaningful before embedding the source in the `.flo`. A node is not "done" just
+because the C# compiles — silent rule that costs nothing to follow:
+
+```
+1. Write/edit C# code
+2. floless compile --code <file> --json   → check data.compiled is true
+3. Write SmartNodeExplanation (3 paragraphs, plain English)
+4. Embed source + explanation + framework metadata in .flo
+```
+
 ## Smart Node vs Think Node — when to choose
 
 | Criterion | Smart Node (C#) | Think Node (LLM) |
@@ -173,7 +224,9 @@ Always parse the envelope; never rely on `success` alone.
 
 ## Compile-fix loop
 
-This is the standard 4-step procedure for authoring a Smart Node:
+This is the standard 5-step procedure for authoring a Smart Node. **A node is NOT
+done at step 3** — leaving the explanation blank ships an unusable node, see the
+"plain-English `SmartNodeExplanation`" section above.
 
 **Step 1:** Write (or edit) your C# source file. Name it anything — e.g., `node.cs`.
 
@@ -185,7 +238,7 @@ floless compile --code node.cs --json
 
 **Step 3:** Parse the response. Check `data.compiled`:
 
-- If `data.compiled` is `true` → done. The code is valid.
+- If `data.compiled` is `true` → continue to Step 5.
 - If `data.compiled` is `false` → go to Step 4.
 
 **Step 4:** Read every entry in `data.diagnostics[]`. Each diagnostic has:
@@ -198,6 +251,23 @@ floless compile --code node.cs --json
 Fix the errors in your source file. Repeat from Step 2.
 
 **Important:** Only `severity: "Error"` entries block compilation. `severity: "Warning"` entries do not block compilation — the node is still deployed. However, fix warnings before shipping.
+
+**Step 5 — Write the plain-English `SmartNodeExplanation`:**
+
+Once the code compiles clean, write the 3-paragraph explanation that populates the editor's
+"Explanation & Notes" panel. See the dedicated section above for required content shape.
+Skipping this step ships a node that compiles but is undocumented — workflow reviewers
+have no idea what it does without reading the C#.
+
+```text
+Paragraph 1: What question this node answers (user-facing purpose)
+Paragraph 2: Inputs and outputs in concrete terms
+Paragraph 3: Mechanism in one sentence
+```
+
+Embed `SmartNodeExplanation` into the `.flo` JSON alongside `SmartNodeGeneratedCode`,
+`SmartNodeTargetFramework`, and `SmartNodeSoftwareVersion` — all four belong together in
+every Smart Node entry.
 
 ---
 
