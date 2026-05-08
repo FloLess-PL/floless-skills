@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires FloLess desktop app running and floless CLI installed. Windows only.
 metadata:
   author: FloLess
-  version: "0.9.15"
+  version: "0.9.16"
   cli-version-min: "1.0.0"
 allowed-tools: Bash(floless:*) Read Write
 ---
@@ -103,6 +103,79 @@ When you need a custom name in your code, **rename in your code**, not in your i
 // Read by the upstream's name, then alias to whatever's clearer locally:
 if (inputs.TryGetValue("filePath", out var raw) is false) return Error("...");
 var jFilePath = raw.ToString();   // local alias, not an input key
+```
+
+## CRITICAL: NetCore Smart Nodes must avoid Tekla "trigger words" anywhere in source — even in comments
+
+> **The single biggest cause of "type or namespace 'Tekla' could not be found" on a Smart Node
+> that doesn't use Tekla at all.** Compiles cleanly via standalone `floless compile --code <file>`,
+> fails when the FloLess editor's **Recompile** button runs the in-process compile pipeline.
+
+FloLess runs `SmartNodeCodeGenerator.EnsureRequiredUsings()` on every in-process compile
+(both `Recompile` from the editor and `floless compile --workflow current --node {id}` from
+the CLI). That function **scans the full source text — including comments and string literals —
+for substrings of Tekla API types** and injects the corresponding `using Tekla.*;` directive
+when a match is found. If the node's `SmartNodeTargetFramework` is `NetCore`, those Tekla
+assemblies aren't referenced, so the injected `using` produces:
+
+```
+Line N: The type or namespace name 'Tekla' could not be found
+        (are you missing a using directive or an assembly reference?)
+```
+
+Standalone `floless compile --code <file>` doesn't run `EnsureRequiredUsings`, so it reports
+`compiled: true` even for the same source that the editor's Recompile rejects. **Always
+verify with `floless compile --workflow current --node {id} --json` for accurate signal.**
+
+### The trigger word list (verified against `SmartNodeCodeGenerator.cs:1998` / floless-app v0.9.x)
+
+Substring match — any occurrence anywhere in the source breaks NetCore compile.
+
+| Injected namespace | Trigger substrings (partial — see source for the full list) |
+|---|---|
+| `Tekla.Structures.Model` | `"new Model("`, `"ModelObject"`, `"Part "`, `"Beam "`, `"Assembly"`, `"BoltGroup"`, `"BoltArray"`, `"Weld"` (matches `"Welds"`!), `"BaseComponent"`, `"Connection "`, `"Component "`, `"Detail "`, `"Fitting"`, `"Grid"`, `"GridPlane"`, `"ContourPlate"`, `"ReferenceModel"`, `"Identifier"`, `"PolyBeam"`, `"NumberingSeries"` |
+| `Tekla.Structures.Geometry3d` | `"Point("`, `"new Point("`, `"Vector("`, `"LineSegment"`, `"CoordinateSystem"`, `"GeometricPlane"`, `"AABB"` |
+| `Tekla.Structures` | `"TeklaStructuresSettings"`, `"ModuleManager"`, `"MacroBuilder"`, `"TeklaStructures.Connect"` |
+| `Tekla.Structures.Model.Operations` | `"Operation.RunMacro"`, `"Operation.IsMacroRunning"`, `"Operation.DisplayPrompt"`, `"Operation.CreateReport"` |
+| `Tekla.Structures.Drawing` | `"Drawing("`, `"Sheet "`, `"DrawingHandler"`, `"Mark "`, `"ViewBase"` |
+| `Tekla.Structures.Solid` | `"Solid "`, `"Face "`, `"Edge "`, `"Loop "`, `"FaceEnumerator"` |
+
+The trap: many of these are common English words in Tekla-adjacent contexts —
+`"Connection "`, `"Component "`, `"Welds"`, `"BoltGroup"`, `"Drawing "` — so AI-generated comments
+explaining "this Smart Node walks the connection dialog and clicks Welds..." accidentally
+trigger Tekla using injection.
+
+### Two safe-authoring rules for NetCore Smart Nodes
+
+1. **Avoid trigger substrings in comments.** Use lowercase variants where possible —
+   `"connection "` instead of `"Connection "` (the trigger is case-sensitive),
+   `"weld"` instead of `"Weld"`, `"component"` / `"detail"` / `"beam"` etc. instead of capitals.
+   For words where lowercase changes meaning (e.g. proper nouns), reword the sentence to drop
+   the space — `"Connection-id"` doesn't match `"Connection "`.
+
+2. **For string literals that must contain a trigger word**, split or downcase:
+   ```csharp
+   // CORRECT — split avoids substring match
+   var label = "Wel" + "ds";
+   // CORRECT — lowercase, regex matches case-insensitively at runtime anyway
+   buttonText = "welds";
+   // WRONG — substring "Welds" matches "Weld" trigger, injects using Tekla.Structures.Model
+   buttonText = "Welds";
+   ```
+
+### Verification command — run after every NetCore Smart Node edit
+
+```bash
+# Find any remaining trigger words (run from project root)
+grep -nE 'Connection |Component |Detail |Beam |Part |Weld|new Model\(|ModelObject|Operation\.RunMacro|Drawing\(|Mark |Solid |Picker|Grid|GridPlane' your-node.cs
+```
+
+Empty output = safe. Any matches need the safe-authoring rules above. Then verify with the
+in-process compile (NOT just standalone):
+
+```bash
+floless compile --code your-node.cs --workflow current --node {nodeId} --json | jq '.data.compiled'
+# → expect: true
 ```
 
 ## CRITICAL: every Smart Node needs a plain-English `SmartNodeExplanation`
