@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires FloLess desktop app running and floless CLI installed. Windows only.
 metadata:
   author: FloLess
-  version: "0.9.17"
+  version: "0.9.18"
   cli-version-min: "1.0.0"
 allowed-tools: Bash(floless:*) Read Write
 ---
@@ -36,33 +36,47 @@ Use this skill when you need to:
 - Discover available skill packs (`floless skills --json`) or templates (`floless templates --type smart --json`)
 - Iterate the compile-fix loop until `data.compiled` is `true`
 
-## CRITICAL: SmartNodeInputSchema and SmartNodeOutputSchema use PascalCase keys
+## CRITICAL: how upstream data reaches a Smart Node (two mechanisms)
 
-The `.flo` JSON fields `SmartNodeInputSchema` and `SmartNodeOutputSchema` carry a
-**JSON-encoded string** of `List<InputFieldSchema>`. That schema model uses **PascalCase
-property names** (`Name`, `Label`, `Type`, `Required`, `Description`, `DefaultValue`,
-`Options`, `Value`) — NOT lowercase. FloLess deserializes case-sensitively, so a schema
-written with lowercase `name`/`type` produces empty `Name` strings, and the Smart Node
-editor's "Edit Input Fields" dialog shows entries with no name — just the type pill.
+> **As of FloLess Phase 101.2 the legacy "Edit Input Fields" dialog is gone.** Smart Nodes
+> no longer expose a per-field input editor, and you no longer "declare inputs" that must
+> match upstream names. Upstream values reach your code through two mechanisms, both live in
+> every node and both keyed off the **upstream node's own output-field names** — FloLess
+> never renames a value across a connection.
 
-```json
-// CORRECT — PascalCase, matches InputFieldSchema in the FloLess source
-"SmartNodeInputSchema": "[{\"Name\":\"filePath\",\"Label\":\"File Path\",\"Type\":\"string\",\"Required\":true,\"Description\":\"…\"}]"
+### Mechanism 1 — inline `{{nodeId.fieldPath}}` tokens in the Instructions panel (primary)
 
-// WRONG — lowercase: deserializes to InputFieldSchema with Name=\"\", Type=\"string\" defaults
-"SmartNodeInputSchema": "[{\"name\":\"filePath\",\"type\":\"string\",\"required\":true}]"
+Reference an upstream value directly in the Smart Node **Instructions** text using a
+double-brace token: `{{nodeId.fieldPath}}`. At compile time a Roslyn rewriter
+(`InlineVariablePostProcessor`) scans the AI-generated C# for that token **inside string
+literals and interpolated strings** and replaces each occurrence with a **synthetic local
+variable**, then prepends one defensive binding statement at the top of your entry method:
+
+```csharp
+// In Instructions you wrote:  …summarize {{excel_cell_changed_5555.cellValue}}…
+// The rewriter injects this at the top of ExecuteAsync, then uses the local in place of the token:
+var inline_excel_cell_changed_5555_cellvalue =
+    inputs.TryGetValue("__inline_excel_cell_changed_5555_cellvalue__", out var __v_0) ? __v_0 : null;
 ```
 
-The supported `Type` values per the source are: `"string"`, `"number"`, `"boolean"`,
-`"dropdown"`, `"FloImage"`. For dropdowns, also populate `Options: [...]`.
+Grammar (whitespace-tolerant; dotted paths allowed for nested fields): `{{ nodeId . fieldPath }}`
+where `nodeId` matches `[A-Za-z0-9_-]+` and `fieldPath` matches `[A-Za-z0-9_.\-]+`. At runtime
+FloLess resolves each token against the upstream node's emitted outputs and fills
+`inputs["__inline_<slug>__"]`. If the upstream hasn't run yet the key is absent and the
+synthetic local degrades to `null` — it never throws. This pipeline is always-on (the earlier
+opt-in flag was retired in 101.2).
 
-Same rule applies to `SmartNodeOutputSchema` — same `InputFieldSchema` model, same casing.
+The Smart Node editor's **Context panel** (right side) lists exactly what you can reference:
 
-## CRITICAL: input keys must match the upstream node's output-field names
+- **Available inputs** — the upstream output keys wired into this node (these are the `nodeId.fieldPath` names).
+- **Available APIs** — runtime API surfaces available to the node: `tekla`, `m365`, `google`, `trimbleconnect`.
+- **Emitted inputs** — a JSON snapshot of the runtime-injected values the AI was told to expect (e.g. API tokens). Mirrors `EmittedInputsJson` on the node.
 
-> **The single biggest mistake AI agents make on Smart Nodes — including in early v0.9 of this skill itself — is inventing custom input names that don't match the upstream component's output schema.**
+### Mechanism 2 — the raw `inputs` dictionary, keyed by upstream output-field names
 
-FloLess does NOT rename values across a connection. When a Folder Watcher trigger fires, the Smart Node receives an `inputs` dictionary populated **directly with the trigger's output-field names**:
+Independently of any inline token, FloLess flattens every upstream node's outputs into the
+`inputs` dictionary **directly under the upstream's own output-field names**. Read them with
+`TryGetValue`:
 
 ```csharp
 // Folder Watcher publishes: filePath, fileName, extension, folderPath, changeType, …
@@ -75,7 +89,14 @@ inputs.TryGetValue("filePath", out var path);
 inputs.TryGetValue("jFilePath", out var path);
 ```
 
-Before writing any `inputs.TryGetValue("…")` call, **discover the actual output-field names of every upstream node**:
+> **The single biggest mistake AI agents make on Smart Nodes — including in early v0.9 of this
+> skill itself — is inventing custom input names that don't match the upstream component's
+> output names.** This applies to BOTH mechanisms: an inline `{{node.field}}` whose field
+> isn't a real upstream output resolves to `null`, and a `TryGetValue("invented")` returns
+> false silently. There is no error in either case — the value is just absent.
+
+Before writing any `{{node.field}}` token or `inputs.TryGetValue("…")` call, **discover the
+actual output-field names of every upstream node**:
 
 | Upstream node type | How to discover its output-field names |
 |---|---|
@@ -84,12 +105,10 @@ Before writing any `inputs.TryGetValue("…")` call, **discover the actual outpu
 | SmartNode | `floless workflow node-context --workflow current --node {id} --json` → `outputSchema` (the keys the upstream Smart Node returns from its `Dictionary<string, object>`) |
 | ThinkNode | same as SmartNode — inspect via `node-context` |
 
-The Smart Node's own `SmartNodeInputSchema` field in the `.flo` declares **the names you intend to read**. If those names don't match anything upstream, the editor shows the input fields as empty/unwired and the runtime quietly delivers nothing — there's no error, the values are just absent. Always cross-check the schema you write against the actual upstream output names.
-
 Helper for the most common case (single Folder Watcher → SmartNode):
 
 ```bash
-# List Folder Watcher output names — the keys you can read in inputs[]
+# List Folder Watcher output names — the keys you can read in inputs[] / reference as {{...}}
 floless component folder-watcher --json | \
   python -c "import sys,json; print('\n'.join(o['name'] for o in json.load(sys.stdin)['data']['outputs']))"
 # → filePath, fileName, fileNameWithoutExtension, extension, folderPath,
@@ -97,13 +116,39 @@ floless component folder-watcher --json | \
 #   lastModified, createdAt, timestamp, files, fileCount
 ```
 
-When you need a custom name in your code, **rename in your code**, not in your input schema:
+When you need a clearer name locally, **rename in your code** — don't try to remap the input:
 
 ```csharp
 // Read by the upstream's name, then alias to whatever's clearer locally:
 if (inputs.TryGetValue("filePath", out var raw) is false) return Error("...");
 var jFilePath = raw.ToString();   // local alias, not an input key
 ```
+
+### `SmartNodeInputSchema` / `SmartNodeOutputSchema` — still PascalCase, but role changed
+
+The `.flo` JSON fields `SmartNodeInputSchema` and `SmartNodeOutputSchema` still exist, are
+still serialized as a **JSON-encoded string** of `List<InputFieldSchema>`, and are still
+deserialized **case-sensitively** with **PascalCase property names** (`Name`, `Label`, `Type`,
+`Required`, `Description`, `DefaultValue`, `Options`, `Value`) — NOT lowercase. `floless
+workflow update-smart-node` still accepts both. The casing rule is unchanged:
+
+```json
+// CORRECT — PascalCase, matches InputFieldSchema in the FloLess source
+"SmartNodeOutputSchema": "[{\"Name\":\"result\",\"Label\":\"Result\",\"Type\":\"string\",\"Required\":true,\"Description\":\"…\"}]"
+
+// WRONG — lowercase: deserializes to InputFieldSchema with Name=\"\", Type=\"string\" defaults
+"SmartNodeOutputSchema": "[{\"name\":\"result\",\"type\":\"string\",\"required\":true}]"
+```
+
+Supported `Type` values: `"string"`, `"number"`, `"boolean"`, `"dropdown"`, `"FloImage"`. For
+dropdowns, also populate `Options: [...]`.
+
+What changed is the **role of `SmartNodeInputSchema`**: with the input dialog gone, it is no
+longer the wiring mechanism. At runtime it only fills `inputs` keys that upstream did **not**
+already populate — a **defaults-only fallback**. To pass a default that itself references an
+upstream value, set the field's `DefaultValue` to a `{{upstream.port}}` template. Prefer
+Mechanism 1 or 2 above for normal data flow. `SmartNodeOutputSchema` remains meaningful: it
+declares what this node emits, which feeds downstream nodes' inline-variable autocomplete.
 
 ## How `EnsureRequiredUsings` auto-injects Tekla namespaces (for context, not avoidance)
 
@@ -371,6 +416,29 @@ When `--workflow` and `--node` are both provided, the response includes `"nodeUp
 > workflow's compile-state cache. The Error badge stays. Run the workflow-bound
 > form (`--workflow current --node {id}`) to actually clear it.
 
+> **CRITICAL — the reverse trap: if the Smart Node editor is OPEN, do NOT push code to it
+> via the CLI.** The editor snapshots `node.GeneratedCode` into its own buffer **once, at
+> open time**, and never observes external writes after that. A workflow-bound
+> `floless compile --code … --workflow current --node {id}` *does* overwrite
+> `node.GeneratedCode` and set the node's state to `Ready` — but the open editor doesn't
+> see it. Worse, the node's `GenerationState` only flips to `Stale` when its **Instructions**
+> change; an external **code** write never marks it Stale, so the editor still reads
+> `Ready` and gives no hint of divergence. If the user then clicks **Recompile** it
+> recompiles the editor's *stale* buffer, and **Save clobbers your CLI-pushed code**.
+>
+> **Guidance:** close the Smart Node editor before any CLI compile/push for that node.
+> After pushing, do NOT trust `nodeUpdated: true`, the `generationState`, or the
+> "Node updated" toast — they can all read green over stale state. Verify the push
+> actually landed by diffing your source against what the node holds:
+>
+> ```bash
+> floless workflow node-context --workflow current --node {id} --json | jq -r '.data.generatedCode'
+> ```
+>
+> (Note: `floless workflow update-smart-node` cannot set the code body — it PATCHes
+> metadata/schema/instructions only. `floless compile … --workflow current --node {id}`
+> is the only CLI path that writes `GeneratedCode`.)
+
 ---
 
 ## Target framework selection
@@ -445,6 +513,40 @@ floless compile --code tekla-node.cs --target-framework net48 --software-version
 
 **Mismatch error:** If you use `--software-version tekla-2025` without `--target-framework net48`, the compile response will contain `errorCode: "software_version_mismatch"` and the node will not compile. Always pair Tekla software versions with `net48`.
 
+### What's actually referenceable at runtime (compile ⊋ run)
+
+> **`data.compiled: true` does NOT guarantee a `net48`/Tekla node will run.** `floless
+> compile` runs Roslyn inside the FloLess **desktop** process, which has a rich reference
+> set. A `net48`/Tekla Smart Node, however, executes in the separate **TeklaBridge**
+> process, whose reference set is a strict subset. Code that satisfies the compiler can
+> still fail at run with `CS0234`/`TypeLoadException` for a type the bridge never loads.
+
+A `net48`/Tekla Smart Node's runtime references are **only**:
+
+- **BCL**: `mscorlib`, `System`, `System.Core`, `System.Runtime`, `System.Collections`,
+  `System.Linq`, `System.Threading.Tasks`, `netstandard`, `System.Text.Json`,
+  `System.Memory`, `System.Buffers`, `System.Net.Http`, `System.ObjectModel`,
+  `System.ComponentModel`.
+- **Tekla**: the `Tekla.*` DLLs for the pinned `--software-version`.
+- **The three FloLess scripting stubs** compiled into the bridge: `IScriptAction`
+  (`FloLess.Core.Scripting.Interfaces`), `ScriptContext` (`FloLess.Core.Scripting`), and
+  `FloImage` (`FloLess.Core.Models`).
+- Any extra assembly names you enabled in Settings → Smart Node → Assemblies.
+
+**Nothing else from `FloLess.Core.*` is available at run** — there is no `FloLess.Core.dll`
+in the bridge. So `FloLess.Core.Extensions`, helpers, models other than `FloImage`, etc. all
+throw `CS0234` at run even when compile passed (see the BCL-only convention under "Coding
+conventions"). The
+in-process `net8.0` path is more forgiving, but **do not rely on the compile step to vet a
+Tekla node** — always finish with an actual run:
+
+```bash
+floless workflow run --workflow current --json   # confirm the node executes, not just compiles
+```
+
+This is the deeper layer beneath the `success != compiled` warning above: `compiled != runs`
+for the Tekla bridge.
+
 ---
 
 ## Software version pinning
@@ -514,7 +616,13 @@ Every C# Smart Node sample in this skill follows the root `CLAUDE.md` coding sta
 - **No underscore-prefixed field names** — write `private int count;` (no leading underscore on field names).
 - **One empty line between properties** for readability.
 - **`ConfigureAwait(false)` on every `await`** — Smart Nodes run in a service context where there is no meaningful SynchronizationContext, but the convention prevents accidental context capture and satisfies the root project rule.
-- **`dictionary.IsNullOrEmpty()` extension** — use `FloLess.Core.Extensions.IsNullOrEmpty()` instead of `!= null && Count > 0` checks.
+- **Use BCL null/empty checks — NOT `FloLess.Core.Extensions.IsNullOrEmpty()`.** Write
+  `string.IsNullOrEmpty(s)` and `list.Count == 0` (or `dict.Count == 0`). The root
+  `CLAUDE.md` "prefer `IsNullOrEmpty()` extension" rule is for app projects that reference
+  `FloLess.Core.dll` — Smart Node source does **not**. In particular the net48/Tekla bridge
+  runtime never loads `FloLess.Core.dll`, so `FloLess.Core.Extensions.IsNullOrEmpty()` throws
+  **CS0234 at run** even though `floless compile` (which has a richer reference set) accepts
+  it. See "What's actually referenceable at runtime (compile ⊋ run)" above.
 - **No `Task.Run()` hacks** — if your code deadlocks without `Task.Run()`, the root cause is sync-over-async. Fix the root cause.
 - **No silently-swallowed `catch` blocks** — always propagate or log exceptions.
 - **No `Environment.Exit()`** — the Smart Node runs inside the FloLess desktop process; calling `Exit()` kills the entire application.

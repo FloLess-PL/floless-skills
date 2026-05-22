@@ -301,7 +301,7 @@ floless compile --code tekla-node.cs --target-framework net48 --software-version
 | `CS0103` | `'foo' does not exist in the current context` | Add missing `using` directive or fix variable name/scope |
 | `CS0246` | `'HttpClient' could not be found` | Enable the required assembly in Settings → Smart Node → Assemblies |
 | `CS0117` | `'JsonValueKind' does not contain 'Obj'` | Check exact enum/member name — e.g., `JsonValueKind.Object` not `.Obj` |
-| `CS1061` | `'string' does not contain 'IsNullOrEmpty'` | Use `string.IsNullOrEmpty(x)` (static) or add `using FloLess.Core.Extensions` for dict extension |
+| `CS1061` | `'string' does not contain 'IsNullOrEmpty'` | Use the BCL static `string.IsNullOrEmpty(x)`, and `x.Count == 0` for collections. Do NOT reach for `using FloLess.Core.Extensions` — that namespace is unavailable to the net48/Tekla bridge runtime (CS0234 at run, even if compile passes). |
 | `CS0234` | `'Linq' does not exist in namespace 'System'` | Correct the namespace — `using System.Linq;` not `using System.Linq.Enumerable;` |
 | `CS0161` | `not all code paths return a value` | Add a fallback `return` after all conditional branches |
 | `CS0029` | `cannot implicitly convert` | Add explicit cast or correct the type |
